@@ -56,8 +56,11 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, process.env.HOST || "127.0.0.1", () => {
-    console.log(`LIFEOS running on http://localhost:${PORT}`);
+  // Hosting platforms route traffic from outside the container, so production must bind all interfaces
+  const HOST = process.env.HOST || (isProduction ? "0.0.0.0" : "127.0.0.1");
+
+  app.listen(PORT, HOST, () => {
+    console.log(`LIFEOS running on http://${HOST}:${PORT}`);
   });
 }
 
