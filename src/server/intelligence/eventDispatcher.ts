@@ -1,5 +1,5 @@
-import { Response } from 'express';
-import { RealtimeEventPayload } from '../../types/index.ts';
+import { Response } from "express";
+import { RealtimeEventPayload } from "../../types/index.ts";
 
 interface ClientConnection {
   userId: string;
@@ -15,7 +15,9 @@ class EventDispatcher {
     this.clients.set(connId, { userId, res, id: connId });
 
     // Send initial keep-alive / connection ack
-    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', userId, timestamp: new Date().toISOString() })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ type: "CONNECTED", userId, timestamp: new Date().toISOString() })}\n\n`,
+    );
 
     return connId;
   }
@@ -43,7 +45,7 @@ class EventDispatcher {
       try {
         client.res.write(raw);
       } catch (err) {
-        console.error('Error broadcasting SSE:', err);
+        console.error("Error broadcasting SSE:", err);
       }
     }
   }

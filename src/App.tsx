@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { api } from './services/apiClient.ts';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "./services/apiClient.ts";
 import {
   UserProfile,
   LifeMoment,
@@ -9,352 +9,318 @@ import {
   CityEvent,
   LifeInsight,
   NotificationItem,
-  RealtimeEventPayload,
-} from './types/index.ts';
-
-import { AppNavigation } from './components/AppNavigation.tsx';
-import { TodayView } from './components/TodayView.tsx';
-import { ExploreView } from './components/ExploreView.tsx';
-import { MomentsView } from './components/MomentsView.tsx';
-import { AssistantView } from './components/AssistantView.tsx';
-import { YouView } from './components/YouView.tsx';
-import { NotificationDrawer } from './components/NotificationDrawer.tsx';
-
+  Attendance,
+  Outcome,
+} from "./types/index.ts";
+import {
+  AppShell,
+  Today,
+  Ask,
+  Moments,
+  Explore,
+  Profile,
+  Inbox,
+  Welcome,
+} from "./components/LifeUI.tsx";
+export type Screen = "today" | "explore" | "moments" | "ai" | "you";
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
-  const [activeTab, setActiveTab] = useState<'today' | 'explore' | 'moments' | 'ai' | 'you'>('today');
-  const [moments, setMoments] = useState<LifeMoment[]>([]);
-  const [proposals, setProposals] = useState<ConnectionProposal[]>([]);
-  const [threads, setThreads] = useState<ConversationThread[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string>('');
-  const [messages, setMessages] = useState<ConversationMessage[]>([]);
-  const [events, setEvents] = useState<CityEvent[]>([]);
-  const [insights, setInsights] = useState<LifeInsight[]>([]);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
-  const [scenarioBanner, setScenarioBanner] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const loadInitialData = useCallback(async () => {
-    try {
-      const [sessionData, usersData, momentsData, proposalsData, threadsData, eventsData, insightsData, notifsData] =
-        await Promise.all([
-          api.getSession(),
-          api.getUsers(),
-          api.getMoments(),
-          api.getProposals(),
-          api.getThreads(),
-          api.getEvents(),
-          api.getInsights(),
-          api.getNotifications(),
-        ]);
-
-      setCurrentUser(sessionData.user);
-      setAllUsers(usersData.users || []);
-      setMoments(momentsData.moments || []);
-      setProposals(proposalsData.proposals || []);
-      setEvents(eventsData.events || []);
-      setInsights(insightsData.insights || []);
-      setNotifications(notifsData.notifications || []);
-
-      const userThreads = threadsData.threads || [];
-      setThreads(userThreads);
-      if (userThreads.length > 0) {
-        const targetThreadId = activeThreadId && userThreads.some((t) => t.id === activeThreadId)
-          ? activeThreadId
-          : userThreads[0].id;
-        setActiveThreadId(targetThreadId);
-
-        const msgs = await api.getMessages(targetThreadId);
-        setMessages(msgs.messages || []);
-      }
-    } catch (err) {
-      console.error('Error loading initial data:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeThreadId]);
-
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
-
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
-    }
+  const [screen, setScreen] = useState<Screen>("today");
+  const [user, setUser] = useState<UserProfile | null>(null),
+    [boot, setBoot] = useState<any>(null),
+    [loading, setLoading] = useState(true);
+  const [moments, setMoments] = useState<LifeMoment[]>([]),
+    [proposals, setProposals] = useState<ConnectionProposal[]>([]),
+    [threads, setThreads] = useState<ConversationThread[]>([]),
+    [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [events, setEvents] = useState<CityEvent[]>([]),
+    [attendance, setAttendance] = useState<Attendance[]>([]),
+    [insights, setInsights] = useState<LifeInsight[]>([]),
+    [notifications, setNotifications] = useState<NotificationItem[]>([]),
+    [outcomes, setOutcomes] = useState<Outcome[]>([]);
+  const [threadId, setThreadId] = useState(""),
+    [inbox, setInbox] = useState(false),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const session = useRef(0),
+    thread = useRef("");
+  const changeThread = useCallback((id: string) => {
+    thread.current = id;
+    setThreadId(id);
   }, []);
-
+  const refresh = useCallback(async () => {
+    const version = session.current;
+    const [s, m, p, t, e, i, n, o] = await Promise.all([
+      api.getSession(),
+      api.getMoments(),
+      api.getProposals(),
+      api.getThreads(),
+      api.getEvents(),
+      api.getInsights(),
+      api.getNotifications(),
+      api.request("/outcomes"),
+    ]);
+    if (version !== session.current) return;
+    setUser(s.user);
+    setMoments(m.moments);
+    setProposals(p.proposals);
+    setThreads(t.threads);
+    setEvents(e.events);
+    setAttendance(e.attendance);
+    setInsights(i.insights);
+    setNotifications(n.notifications);
+    setOutcomes(o.outcomes);
+    const id = t.threads.some(
+      (t: ConversationThread) => t.id === thread.current,
+    )
+      ? thread.current
+      : t.threads.find((t: ConversationThread) => t.threadType === "GENERAL_AI")
+          ?.id || t.threads[0]?.id;
+    if (id) {
+      changeThread(id);
+      const result = await api.getMessages(id);
+      if (version === session.current && thread.current === id)
+        setMessages(result.messages);
+    }
+  }, [changeThread]);
   useEffect(() => {
-    const unsubscribe = api.subscribeToRealtime((payload: RealtimeEventPayload) => {
-      console.log('Realtime SSE event received:', payload.type);
-
-      if (payload.type === 'MOMENT_CREATED' || payload.type === 'MOMENT_UPDATED') {
-        api.getMoments().then((res) => setMoments(res.moments || []));
+    (async () => {
+      try {
+        setBoot(await api.request("/bootstrap"));
+        if (api.getSessionToken()) await refresh();
+      } catch (e) {
+        setError((e as Error).message);
+        api.setSessionToken("");
+      } finally {
+        setLoading(false);
       }
-
-      if (payload.type === 'PROPOSAL_UPDATED') {
-        api.getProposals().then((res) => setProposals(res.proposals || []));
-        api.getThreads().then((res) => {
-          setThreads(res.threads || []);
-          if (activeThreadId) {
-            api.getMessages(activeThreadId).then((m) => setMessages(m.messages || []));
-          }
-        });
-        api.getNotifications().then((res) => setNotifications(res.notifications || []));
-      }
-
-      if (payload.type === 'NEW_MESSAGE') {
-        if (activeThreadId) {
-          api.getMessages(activeThreadId).then((m) => setMessages(m.messages || []));
-        }
-      }
-
-      if (payload.type === 'INSIGHT_GENERATED') {
-        api.getInsights().then((res) => setInsights(res.insights || []));
-      }
-
-      if (payload.type === 'EVENT_CASCADE_UPDATED') {
-        api.getEvents().then((res) => setEvents(res.events || []));
-      }
+    })();
+  }, [refresh]);
+  useEffect(() => {
+    if (!user) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const unsub = api.subscribeToRealtime((p) => {
+      clearTimeout(timer);
+      timer = setTimeout(
+        () => refresh().catch((e) => setError(e.message)),
+        180,
+      );
     });
-
-    return () => unsubscribe();
-  }, [activeThreadId]);
-
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
+  }, [user?.id, refresh]);
   useEffect(() => {
-    if (activeThreadId) {
-      api.getMessages(activeThreadId).then((res) => setMessages(res.messages || []));
-    }
-  }, [activeThreadId]);
-
-  const handleSwitchUser = async (userId: string) => {
-    setIsLoading(true);
-    api.setSessionToken(userId);
-    const url = new URL(window.location.href);
-    url.searchParams.set('session', userId);
-    window.history.pushState({}, '', url.toString());
-    await loadInitialData();
-  };
-
-  const handleCreateMoment = async (text: string) => {
-    const res = await api.createMoment({ description: text });
-    if (res.success && res.moment) {
-      setMoments((prev) => [res.moment, ...prev]);
-      const [pRes, tRes] = await Promise.all([api.getProposals(), api.getThreads()]);
-      setProposals(pRes.proposals || []);
-      setThreads(tRes.threads || []);
-      if (tRes.threads && tRes.threads.length > 0) {
-        api.getMessages(tRes.threads[0].id).then((m) => setMessages(m.messages || []));
-      }
-    }
-  };
-
-  const handleSendMessage = async (threadId: string, content: string) => {
-    const res = await api.sendMessage(threadId, content);
-    if (res.success) {
-      const msgs = await api.getMessages(threadId);
-      setMessages(msgs.messages || []);
-      const [mRes, pRes] = await Promise.all([api.getMoments(), api.getProposals()]);
-      setMoments(mRes.moments || []);
-      setProposals(pRes.proposals || []);
-    }
-  };
-
-  const handleRespondProposal = async (
-    proposalId: string,
-    action: 'RECIPIENT_INTERESTED' | 'INITIATOR_APPROVED' | 'DECLINE' | 'ADJUST',
-    options?: { newTime?: string; newPlace?: string; reason?: string }
-  ) => {
-    const res = await api.respondToProposal(proposalId, action, options);
-    if (res.success) {
-      const [pRes, tRes, nRes] = await Promise.all([
-        api.getProposals(),
-        api.getThreads(),
-        api.getNotifications(),
-      ]);
-      setProposals(pRes.proposals || []);
-      setThreads(tRes.threads || []);
-      setNotifications(nRes.notifications || []);
-      if (activeThreadId) {
-        const msgs = await api.getMessages(activeThreadId);
-        setMessages(msgs.messages || []);
-      }
-    }
-  };
-
-  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
-    const res = await api.updateProfile(updates);
-    if (res.success && res.user) {
-      setCurrentUser(res.user);
-    }
-  };
-
-  const handleRsvpEvent = async (eventId: string, attending: boolean) => {
-    const res = await api.rsvpEvent(eventId, attending);
-    if (res.success && res.event) {
-      setEvents((prev) => prev.map((e) => (e.id === eventId ? res.event : e)));
-      const [mRes, iRes] = await Promise.all([api.getMoments(), api.getInsights()]);
-      setMoments(mRes.moments || []);
-      setInsights(iRes.insights || []);
-    }
-  };
-
-  const handleRunDemo = async (scenario: 'SCENARIO_A' | 'SCENARIO_B' | 'SCENARIO_C' | 'RESET') => {
-    setIsLoading(true);
+    if (!threadId) return;
+    let alive = true;
+    api
+      .getMessages(threadId)
+      .then((r) => {
+        if (alive) setMessages(r.messages);
+      })
+      .catch((e) => setError(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [threadId]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [screen]);
+  const run = async (operation: () => Promise<any>) => {
+    setBusy(true);
+    setError("");
     try {
-      const res = await api.runDemoScenario(scenario);
-      setScenarioBanner(res.message);
-      setTimeout(() => setScenarioBanner(null), 5000);
-
-      await loadInitialData();
-
-      if (scenario === 'SCENARIO_A') {
-        setActiveTab('ai');
-      } else if (scenario === 'SCENARIO_B') {
-        setActiveTab('explore');
-      } else if (scenario === 'SCENARIO_C') {
-        setActiveTab('today');
-      }
+      const result = await operation();
+      await refresh();
+      return result;
+    } catch (e) {
+      setError((e as Error).message);
+      throw e;
     } finally {
-      setIsLoading(false);
+      setBusy(false);
     }
   };
-
-  const handleNotificationFeedback = async (
-    id: string,
-    action: 'DISMISS' | 'SNOOZE' | 'NOT_INTERESTED' | 'STOP_TOPIC'
-  ) => {
-    const res = await api.feedbackNotification(id, action);
-    if (res.success) {
-      setNotifications(res.notifications || []);
+  const activate = async (data: any) => {
+    session.current++;
+    setMessages([]);
+    changeThread("");
+    api.setSessionToken(data.sessionToken);
+    setUser(data.user);
+    await refresh();
+    setScreen("today");
+    setError("");
+  };
+  const enterDemo = async (id: string) => {
+    setLoading(true);
+    try {
+      await activate(
+        await api.request("/demo/session", "POST", { userId: id }),
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
-
-  if (isLoading && !currentUser) {
+  const createUser = async (data: any) => {
+    await activate(await api.createUser(data));
+  };
+  const send = async (content: string) => {
+    let id = thread.current;
+    if (!id) {
+      const r = await api.request("/threads", "POST", {});
+      id = r.thread.id;
+      changeThread(id);
+    }
+    setScreen("ai");
+    await run(() => api.sendMessage(id, content));
+  };
+  const discuss = async (momentId: string) => {
+    try {
+      const existing = threads.find((t) => t.relatedMomentId === momentId);
+      const target =
+        existing ||
+        (await api.request("/threads", "POST", { momentId })).thread;
+      changeThread(target.id);
+      setScreen("ai");
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  const demo = async (scenario: string) => {
+    await run(async () => {
+      const r = await api.runDemoScenario(scenario);
+      setNotice(r.message);
+    });
+  };
+  if (loading && !user)
     return (
-      <div className="min-h-screen bg-[#FCFCFF] flex flex-col items-center justify-center space-y-3">
-        <div className="w-10 h-10 rounded-2xl bg-[#5278F5] text-white flex items-center justify-center font-bold text-sm shadow-md animate-pulse">
-          L
-        </div>
-        <p className="text-xs font-medium text-[#778296]">
-          Loading LIFEOS Dubai...
-        </p>
+      <div className="loading-screen">
+        <span className="signature-orb thinking" />
+        <p>Making room for your day.</p>
       </div>
     );
-  }
-
+  if (!user)
+    return (
+      <Welcome
+        boot={boot}
+        loading={loading}
+        onDemo={enterDemo}
+        onCreate={createUser}
+        error={error}
+      />
+    );
+  const common = { busy, onAction: run };
   return (
-    <div className="min-h-screen ambient-soft-mesh text-[#171D2B] flex flex-col font-sans selection:bg-[#DDE8FF] selection:text-[#5278F5]">
-      {/* Soft Future Navigation */}
-      {currentUser && (
-        <AppNavigation
-          currentUser={currentUser}
-          allUsers={allUsers}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onSwitchUser={handleSwitchUser}
-          notifications={notifications}
-          onOpenNotifications={() => setNotificationDrawerOpen(true)}
-          onRunDemo={handleRunDemo}
-        />
-      )}
-
-      {/* Scenario Notification Banner */}
-      {scenarioBanner && (
-        <div className="bg-[#5278F5] text-white px-4 py-2 text-center text-xs font-medium shadow-sm flex items-center justify-center space-x-2 animate-fadeIn">
-          <span>{scenarioBanner}</span>
-          <button
-            onClick={() => setScenarioBanner(null)}
-            className="ml-2 underline text-white/80 hover:text-white cursor-pointer"
-          >
-            Dismiss
+    <AppShell
+      user={user}
+      screen={screen}
+      onNavigate={setScreen}
+      onInbox={() => setInbox(true)}
+      unread={
+        notifications.filter((n) => n.deliveryStatus === "DELIVERED").length
+      }
+    >
+      {error && (
+        <div role="alert" className="alert error">
+          {error}
+          <button aria-label="Dismiss error" onClick={() => setError("")}>
+            ×
           </button>
         </div>
       )}
-
-      {/* Main Views */}
-      <main className="flex-1">
-        {activeTab === 'today' && currentUser && (
-          <TodayView
-            currentUser={currentUser}
-            moments={moments}
-            insights={insights}
-            events={events}
-            onOpenAiChat={() => setActiveTab('ai')}
-            onCreateMoment={handleCreateMoment}
-            onRsvpEvent={handleRsvpEvent}
-            onNavigateToMoments={() => setActiveTab('moments')}
-            onNavigateToExplore={() => setActiveTab('explore')}
-          />
-        )}
-
-        {activeTab === 'explore' && (
-          <ExploreView
-            events={events}
-            moments={moments}
-            insights={insights}
-            onRsvpEvent={handleRsvpEvent}
-          />
-        )}
-
-        {activeTab === 'moments' && currentUser && (
-          <MomentsView
-            moments={moments}
-            proposals={proposals}
-            currentUser={currentUser}
-            onCreateMoment={handleCreateMoment}
-            onRespondProposal={handleRespondProposal}
-            onOpenAiChat={() => setActiveTab('ai')}
-          />
-        )}
-
-        {activeTab === 'ai' && currentUser && (
-          <AssistantView
-            currentUser={currentUser}
-            threads={threads}
-            activeThreadId={activeThreadId}
-            setActiveThreadId={setActiveThreadId}
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onRespondProposal={handleRespondProposal}
-            proposals={proposals}
-          />
-        )}
-
-        {activeTab === 'you' && currentUser && (
-          <YouView
-            currentUser={currentUser}
-            allUsers={allUsers}
-            onSwitchUser={handleSwitchUser}
-            onUpdateProfile={handleUpdateProfile}
-          />
-        )}
-      </main>
-
-      {/* Notification Drawer */}
-      <NotificationDrawer
-        isOpen={notificationDrawerOpen}
-        onClose={() => setNotificationDrawerOpen(false)}
-        notifications={notifications}
-        onFeedback={handleNotificationFeedback}
-        onNavigateToChat={() => setActiveTab('ai')}
-      />
-
-      {/* Soft Clean Minimalist Footer */}
-      <footer className="mt-auto border-t border-[#E9EDF4] bg-white/70 py-6 text-xs text-[#778296] hidden md:block">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center space-x-2">
-            <span className="font-semibold text-[#171D2B]">LIFEOS</span>
-            <span>·</span>
-            <span>Live your best life in Dubai. Let the city work with you.</span>
-          </div>
-          <div className="text-[11px] text-[#778296]/80">
-            Soft Future Edition · GST (UTC+4)
-          </div>
+      {notice && (
+        <div role="status" className="alert">
+          {notice}
+          <button aria-label="Dismiss message" onClick={() => setNotice("")}>
+            ×
+          </button>
         </div>
-      </footer>
-    </div>
+      )}
+      <div className="screen-enter" key={screen}>
+        {screen === "today" && (
+          <Today
+            user={user}
+            moments={moments}
+            events={events}
+            insights={insights}
+            outcomes={outcomes}
+            proposals={proposals}
+            onSend={send}
+            onNavigate={setScreen}
+            ai={boot?.ai}
+            {...common}
+          />
+        )}
+        {screen === "ai" && (
+          <Ask
+            user={user}
+            threads={threads}
+            activeId={threadId}
+            onSelect={changeThread}
+            messages={messages}
+            proposals={proposals}
+            onSend={send}
+            onNew={async () => {
+              const r = await api.request("/threads", "POST", {});
+              changeThread(r.thread.id);
+              await refresh();
+            }}
+            {...common}
+          />
+        )}
+        {screen === "moments" && (
+          <Moments
+            moments={moments}
+            proposals={proposals}
+            user={user}
+            onDiscuss={discuss}
+            onSend={send}
+            {...common}
+          />
+        )}
+        {screen === "explore" && (
+          <Explore
+            events={events}
+            attendance={attendance}
+            moments={moments}
+            user={user}
+            {...common}
+          />
+        )}
+        {screen === "you" && (
+          <Profile
+            key={user.id}
+            user={user}
+            boot={boot}
+            onDemo={enterDemo}
+            onCreate={createUser}
+            onSave={(updates) => run(() => api.updateProfile(updates))}
+            onDemoScenario={demo}
+            onLeave={() => {
+              session.current++;
+              api.setSessionToken("");
+              setUser(null);
+              changeThread("");
+            }}
+            {...common}
+          />
+        )}
+      </div>
+      {inbox && (
+        <Inbox
+          notifications={notifications}
+          onClose={() => setInbox(false)}
+          onOpen={(id) => {
+            if (id) changeThread(id);
+            setScreen("ai");
+            setInbox(false);
+          }}
+          {...common}
+        />
+      )}
+    </AppShell>
   );
 }

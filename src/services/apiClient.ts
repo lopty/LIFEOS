@@ -1,271 +1,121 @@
-import {
-  UserProfile,
-  LifeMoment,
-  ConnectionProposal,
-  ConversationThread,
-  ConversationMessage,
-  CityEvent,
-  LifeInsight,
-  NotificationItem,
-  RealtimeEventPayload,
-} from '../types/index.ts';
-
-const SESSION_STORAGE_KEY = 'lifeos_active_session_token';
-
+import { RealtimeEventPayload, UserProfile } from "../types/index.ts";
+const SESSION_KEY = "lifeos_private_session";
 class ApiClient {
-  private sessionToken: string;
-  private sseSource: EventSource | null = null;
-  private listeners: ((event: RealtimeEventPayload) => void)[] = [];
-
+  private token = "";
   constructor() {
-    // Check URL param first (e.g., ?session=user_rashid_alfalasi)
-    const urlParams = new URLSearchParams(window.location.search);
-    const querySession = urlParams.get('session') || urlParams.get('userId');
-
-    if (querySession) {
-      this.sessionToken = querySession;
-      localStorage.setItem(SESSION_STORAGE_KEY, querySession);
-    } else {
-      this.sessionToken = localStorage.getItem(SESSION_STORAGE_KEY) || 'user_elena_vance';
-    }
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    this.token =
+      fragment.get("access") || sessionStorage.getItem(SESSION_KEY) || "";
+    if (this.token) sessionStorage.setItem(SESSION_KEY, this.token);
+    if (fragment.has("access"))
+      window.history.replaceState({}, "", window.location.pathname);
   }
-
-  public getSessionToken(): string {
-    return this.sessionToken;
+  getSessionToken() {
+    return this.token;
   }
-
-  public setSessionToken(token: string) {
-    this.sessionToken = token;
-    localStorage.setItem(SESSION_STORAGE_KEY, token);
-    this.reconnectSSE();
+  setSessionToken(token: string) {
+    this.token = token;
+    sessionStorage.setItem(SESSION_KEY, token);
   }
-
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json',
-      'x-session-token': this.sessionToken,
-    };
-  }
-
-  // --- Realtime SSE ---
-  public subscribeToRealtime(callback: (event: RealtimeEventPayload) => void): () => void {
-    this.listeners.push(callback);
-    if (!this.sseSource) {
-      this.connectSSE();
-    }
-    return () => {
-      this.listeners = this.listeners.filter((cb) => cb !== callback);
-      if (this.listeners.length === 0 && this.sseSource) {
-        this.sseSource.close();
-        this.sseSource = null;
-      }
-    };
-  }
-
-  private connectSSE() {
+  async request(path: string, method = "GET", body?: unknown): Promise<any> {
+    const res = await fetch(`/api${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-session-token": this.token,
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    let data;
     try {
-      this.sseSource = new EventSource(`/api/events/stream?session=${encodeURIComponent(this.sessionToken)}`);
-
-      this.sseSource.onmessage = (e) => {
-        try {
-          const payload: RealtimeEventPayload = JSON.parse(e.data);
-          this.listeners.forEach((cb) => cb(payload));
-
-          // Trigger native notification if permission granted and priority relevant
-          if (
-            (payload.type === 'NEW_NOTIFICATION' || payload.type === 'PROPOSAL_UPDATED') &&
-            'Notification' in window &&
-            Notification.permission === 'granted'
-          ) {
-            const title = payload.data?.proposal ? 'LIFEOS Connection Update' : 'LIFEOS City Pulse';
-            const body =
-              payload.data?.message?.content ||
-              payload.data?.proposal?.reason ||
-              'A new living moment update is ready in your Dubai hub.';
-            new Notification(title, { body, icon: '/favicon.ico' });
-          }
-        } catch (err) {
-          console.warn('Error parsing SSE event:', err);
-        }
-      };
-
-      this.sseSource.onerror = () => {
-        // Handled silently; browser auto-reconnects SSE
-      };
-    } catch (err) {
-      console.warn('Could not establish SSE connection:', err);
+      data = await res.json();
+    } catch {
+      throw new Error(
+        "The server did not return a valid response. Check that it is running.",
+      );
     }
+    if (!res.ok)
+      throw new Error(data.error || "Could not complete the request.");
+    return data;
   }
-
-  private reconnectSSE() {
-    if (this.sseSource) {
-      this.sseSource.close();
-      this.sseSource = null;
-    }
-    if (this.listeners.length > 0) {
-      this.connectSSE();
-    }
+  subscribeToRealtime(callback: (event: RealtimeEventPayload) => void) {
+    if (!this.token) return () => {};
+    const source = new EventSource(
+      `/api/events/stream?session=${encodeURIComponent(this.token)}`,
+    );
+    source.onmessage = (e) => {
+      try {
+        const p = JSON.parse(e.data);
+        callback(p);
+        const n = p.data?.notification;
+        if (
+          p.type === "NEW_NOTIFICATION" &&
+          n?.deliveryStatus === "DELIVERED" &&
+          n.priority !== "SILENT" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        )
+          new Notification(n.title, { body: n.message });
+      } catch {}
+    };
+    return () => source.close();
   }
-
-  // --- API Calls ---
-  public async getSession(): Promise<{ user: UserProfile; activeConnections: number }> {
-    const res = await fetch(`/api/session?session=${encodeURIComponent(this.sessionToken)}`, {
-      headers: this.getHeaders(),
+  getSession() {
+    return this.request("/session");
+  }
+  getUsers() {
+    return this.request("/users");
+  }
+  createUser(data: any) {
+    return this.request("/users", "POST", data);
+  }
+  updateProfile(updates: Partial<UserProfile>) {
+    return this.request("/users/profile", "PUT", updates);
+  }
+  getMoments(all?: boolean) {
+    return this.request("/moments");
+  }
+  createMoment(params: any) {
+    return this.request("/moments", "POST", params);
+  }
+  getProposals() {
+    return this.request("/proposals");
+  }
+  respondToProposal(id: string, action: string, options?: any) {
+    return this.request(`/proposals/${id}/respond`, "POST", {
+      action,
+      ...options,
     });
-    return res.json();
   }
-
-  public async getUsers(): Promise<{ users: UserProfile[] }> {
-    const res = await fetch('/api/users');
-    return res.json();
+  getThreads() {
+    return this.request("/threads");
   }
-
-  public async createUser(data: {
-    name: string;
-    profession?: string;
-    primaryArea?: string;
-    bio?: string;
-  }): Promise<{ success: boolean; user: UserProfile }> {
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
-    return res.json();
+  getMessages(id: string) {
+    return this.request(`/threads/${id}/messages`);
   }
-
-  public async updateProfile(updates: Partial<UserProfile>): Promise<{ success: boolean; user: UserProfile }> {
-    const res = await fetch('/api/users/profile', {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(updates),
-    });
-    return res.json();
+  sendMessage(id: string, content: string) {
+    return this.request(`/threads/${id}/messages`, "POST", { content });
   }
-
-  public async getMoments(all?: boolean): Promise<{ moments: LifeMoment[] }> {
-    const res = await fetch(`/api/moments?all=${all ? 'true' : 'false'}&session=${this.sessionToken}`, {
-      headers: this.getHeaders(),
-    });
-    return res.json();
+  getEvents() {
+    return this.request("/events");
   }
-
-  public async createMoment(params: {
-    description: string;
-    relatedEventId?: string;
-    manualKind?: string;
-  }): Promise<{ success: boolean; moment: LifeMoment }> {
-    const res = await fetch('/api/moments', {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(params),
-    });
-    return res.json();
+  rsvpEvent(id: string, attending: boolean) {
+    return this.request(`/events/${id}/rsvp`, "POST", { attending });
   }
-
-  public async getProposals(): Promise<{ proposals: ConnectionProposal[] }> {
-    const res = await fetch(`/api/proposals?session=${this.sessionToken}`, {
-      headers: this.getHeaders(),
-    });
-    return res.json();
+  getInsights() {
+    return this.request("/insights");
   }
-
-  public async respondToProposal(
-    proposalId: string,
-    action: 'RECIPIENT_INTERESTED' | 'INITIATOR_APPROVED' | 'DECLINE' | 'ADJUST',
-    options?: { newTime?: string; newPlace?: string; reason?: string }
-  ): Promise<{ success: boolean; proposal: ConnectionProposal }> {
-    const res = await fetch(`/api/proposals/${proposalId}/respond`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ action, ...options }),
-    });
-    return res.json();
+  updateInsightStatus(id: string, status: string) {
+    return this.request(`/insights/${id}/status`, "POST", { status });
   }
-
-  public async getThreads(): Promise<{ threads: ConversationThread[] }> {
-    const res = await fetch(`/api/threads?session=${this.sessionToken}`, {
-      headers: this.getHeaders(),
-    });
-    return res.json();
+  getNotifications() {
+    return this.request("/notifications");
   }
-
-  public async getMessages(threadId: string): Promise<{ messages: ConversationMessage[] }> {
-    const res = await fetch(`/api/threads/${threadId}/messages`, {
-      headers: this.getHeaders(),
-    });
-    return res.json();
+  feedbackNotification(id: string, action: string) {
+    return this.request(`/notifications/${id}/feedback`, "POST", { action });
   }
-
-  public async sendMessage(
-    threadId: string,
-    content: string
-  ): Promise<{ success: boolean; userMessage: ConversationMessage; aiMessage: ConversationMessage }> {
-    const res = await fetch(`/api/threads/${threadId}/messages`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ content }),
-    });
-    return res.json();
-  }
-
-  public async getEvents(): Promise<{ events: CityEvent[] }> {
-    const res = await fetch('/api/events');
-    return res.json();
-  }
-
-  public async rsvpEvent(eventId: string, attending: boolean): Promise<{ success: boolean; event: CityEvent }> {
-    const res = await fetch(`/api/events/${eventId}/rsvp`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ attending }),
-    });
-    return res.json();
-  }
-
-  public async getInsights(): Promise<{ insights: LifeInsight[] }> {
-    const res = await fetch(`/api/insights?session=${this.sessionToken}`, {
-      headers: this.getHeaders(),
-    });
-    return res.json();
-  }
-
-  public async updateInsightStatus(id: string, status: 'ACCEPTED' | 'DISMISSED'): Promise<any> {
-    const res = await fetch(`/api/insights/${id}/status`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ status }),
-    });
-    return res.json();
-  }
-
-  public async getNotifications(): Promise<{ notifications: NotificationItem[] }> {
-    const res = await fetch(`/api/notifications?session=${this.sessionToken}`, {
-      headers: this.getHeaders(),
-    });
-    return res.json();
-  }
-
-  public async feedbackNotification(
-    id: string,
-    action: 'DISMISS' | 'SNOOZE' | 'NOT_INTERESTED' | 'STOP_TOPIC'
-  ): Promise<{ success: boolean; notifications: NotificationItem[] }> {
-    const res = await fetch(`/api/notifications/${id}/feedback`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ action }),
-    });
-    return res.json();
-  }
-
-  public async runDemoScenario(scenario: 'SCENARIO_A' | 'SCENARIO_B' | 'SCENARIO_C' | 'RESET'): Promise<any> {
-    const res = await fetch('/api/demo/run-scenario', {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ scenario }),
-    });
-    return res.json();
+  runDemoScenario(scenario: string) {
+    return this.request("/demo/run-scenario", "POST", { scenario });
   }
 }
-
 export const api = new ApiClient();

@@ -1,31 +1,31 @@
 export type ConnectionState =
-  | 'DISCOVERED'
-  | 'ELIGIBILITY_CHECKED'
-  | 'INVITATION_PENDING'
-  | 'PARTICIPANT_INTERESTED'
-  | 'MUTUAL_CONSENT_PENDING'
-  | 'ACCEPTED'
-  | 'COORDINATING'
-  | 'CONFIRMED'
-  | 'COMPLETED'
-  | 'DECLINED'
-  | 'EXPIRED'
-  | 'CANCELLED'
-  | 'FAILED';
+  | "DISCOVERED"
+  | "ELIGIBILITY_CHECKED"
+  | "INVITATION_PENDING"
+  | "PARTICIPANT_INTERESTED"
+  | "MUTUAL_CONSENT_PENDING"
+  | "ACCEPTED"
+  | "COORDINATING"
+  | "CONFIRMED"
+  | "COMPLETED"
+  | "DECLINED"
+  | "EXPIRED"
+  | "CANCELLED"
+  | "FAILED";
 
 export type MomentType =
-  | 'ATTENDING_EVENT'
-  | 'WORK_SHIFT'
-  | 'FOOD_HUNGER'
-  | 'SOCIAL_GATHERING'
-  | 'NETWORKING_MEETING'
-  | 'REST_TIME'
-  | 'SERVICE_OFFER'
-  | 'SURPLUS_FOOD'
-  | 'COMMUNITY_ACTIVITY'
-  | 'TRANSIT_JOURNEY';
+  | "ATTENDING_EVENT"
+  | "WORK_SHIFT"
+  | "FOOD_HUNGER"
+  | "SOCIAL_GATHERING"
+  | "NETWORKING_MEETING"
+  | "REST_TIME"
+  | "SERVICE_OFFER"
+  | "SURPLUS_FOOD"
+  | "COMMUNITY_ACTIVITY"
+  | "TRANSIT_JOURNEY";
 
-export type NotificationPriority = 'SILENT' | 'GENTLE' | 'ACTION_REQUIRED';
+export type NotificationPriority = "SILENT" | "GENTLE" | "ACTION_REQUIRED";
 
 export interface UserProfile {
   id: string;
@@ -63,6 +63,10 @@ export interface UserProfile {
     quietHoursActive: boolean;
   };
   sessionToken: string;
+  goals?: string[];
+  allowEventDiscovery?: boolean;
+  stoppedTopics?: string[];
+  notificationDate?: string;
 }
 
 export interface LifeMoment {
@@ -77,8 +81,8 @@ export interface LifeMoment {
   goals: string[]; // e.g. ["Meet AI founders", "Explore seed funding"]
   preferences: string[]; // e.g. ["Quiet venue", "Tech focused"]
   protectedConstraints: string[]; // e.g. ["No direct contact info share", "Free by 21:30"]
-  sharingPermissions: 'PRIVATE' | 'AGENT_COORDINATED' | 'COMMUNITY_VISIBLE';
-  status: 'ACTIVE' | 'COORDINATING' | 'FULFILLED' | 'CANCELLED';
+  sharingPermissions: "PRIVATE" | "AGENT_COORDINATED" | "COMMUNITY_VISIBLE";
+  status: "ACTIVE" | "COORDINATING" | "FULFILLED" | "CANCELLED";
   relatedEventId?: string;
   createdAt: string;
 }
@@ -99,8 +103,8 @@ export interface ConnectionProposal {
   proposedTime?: string;
   proposedPlace?: string;
   meetingObjective?: string;
-  initiatorConsent?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
-  recipientConsent?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  initiatorConsent?: "PENDING" | "ACCEPTED" | "DECLINED";
+  recipientConsent?: "PENDING" | "ACCEPTED" | "DECLINED";
   stateHistory: {
     state: ConnectionState;
     timestamp: string;
@@ -116,9 +120,10 @@ export interface ConversationThread {
   ownerUserId: string;
   relatedMomentId?: string;
   relatedProposalId?: string;
-  threadType: 'GENERAL_AI' | 'MOMENT_COORDINATION' | 'PROPOSAL_CONSENT' | 'INSIGHT';
+  threadType:
+    "GENERAL_AI" | "MOMENT_COORDINATION" | "PROPOSAL_CONSENT" | "INSIGHT";
   title: string;
-  status: 'ACTIVE' | 'ARCHIVED' | 'RESOLVED';
+  status: "ACTIVE" | "ARCHIVED" | "RESOLVED";
   unreadCount: number;
   updatedAt: string;
 }
@@ -126,7 +131,7 @@ export interface ConversationThread {
 export interface ConversationMessage {
   id: string;
   threadId: string;
-  senderRole: 'USER' | 'LIFEOS_AI' | 'SYSTEM';
+  senderRole: "USER" | "LIFEOS_AI" | "SYSTEM";
   content: string;
   createdAt: string;
   sourceActionId?: string;
@@ -144,7 +149,7 @@ export interface ConversationMessage {
     label: string;
     action: string;
     payload?: any;
-    variant?: 'primary' | 'secondary' | 'danger';
+    variant?: "primary" | "secondary" | "danger";
   }[];
 }
 
@@ -158,6 +163,7 @@ export interface CityEvent {
   endTime: string;
   organizerId: string;
   organizerName: string;
+  isDemo?: boolean;
   category: string;
   description: string;
   estimatedAttendance: number;
@@ -171,7 +177,7 @@ export interface CityEvent {
   requiredServices?: {
     serviceType: string;
     slots: number;
-    status: 'OPEN' | 'PARTIAL' | 'FILLED';
+    status: "OPEN" | "PARTIAL" | "FILLED";
   }[];
 }
 
@@ -179,14 +185,19 @@ export interface LifeInsight {
   id: string;
   recipientUserId: string;
   relatedMomentId?: string;
-  insightType: 'TRANSPORT_DEMAND' | 'SCHEDULE_BUFFER' | 'FOOD_RESCUE' | 'OPPORTUNITY' | 'WELLBEING';
+  insightType:
+    | "TRANSPORT_DEMAND"
+    | "SCHEDULE_BUFFER"
+    | "FOOD_RESCUE"
+    | "OPPORTUNITY"
+    | "WELLBEING";
   title: string;
   summary: string;
   evidence: string;
   confidence: number;
   nextSuggestedAction: string;
   isActionable: boolean;
-  status: 'NEW' | 'ACCEPTED' | 'DISMISSED';
+  status: "NEW" | "ACCEPTED" | "DISMISSED";
   createdAt: string;
 }
 
@@ -197,11 +208,11 @@ export interface NotificationItem {
   priority: NotificationPriority;
   title: string;
   message: string;
-  deliveryStatus: 'PENDING' | 'DELIVERED' | 'DISMISSED' | 'SNOOZED';
+  deliveryStatus: "PENDING" | "DELIVERED" | "DISMISSED" | "SNOOZED";
   scheduledAt: string;
   deliveredAt?: string;
   deduplicationKey: string;
-  category: 'INTRODUCTION' | 'MOMENT_UPDATE' | 'CITY_PULSE' | 'SCHEDULE';
+  category: "INTRODUCTION" | "MOMENT_UPDATE" | "CITY_PULSE" | "SCHEDULE";
 }
 
 export interface PaperTradeAsset {
@@ -215,14 +226,30 @@ export interface PaperTradeAsset {
 
 export interface RealtimeEventPayload {
   type:
-    | 'MOMENT_CREATED'
-    | 'MOMENT_UPDATED'
-    | 'PROPOSAL_UPDATED'
-    | 'NEW_MESSAGE'
-    | 'NEW_NOTIFICATION'
-    | 'INSIGHT_GENERATED'
-    | 'EVENT_CASCADE_UPDATED';
+    | "MOMENT_CREATED"
+    | "MOMENT_UPDATED"
+    | "PROPOSAL_UPDATED"
+    | "NEW_MESSAGE"
+    | "NEW_NOTIFICATION"
+    | "INSIGHT_GENERATED"
+    | "EVENT_CASCADE_UPDATED";
   recipientUserId?: string;
   data: any;
   timestamp: string;
+}
+
+export interface Attendance {
+  eventId: string;
+  userId: string;
+  attending: boolean;
+  goals: string[];
+}
+export interface Outcome {
+  id: string;
+  ownerId: string;
+  relatedMomentId?: string;
+  proposalId?: string;
+  summary: string;
+  helpful?: boolean;
+  createdAt: string;
 }

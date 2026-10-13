@@ -1,539 +1,864 @@
-import { Router, Request, Response } from 'express';
-import { db } from '../db.ts';
-import { eventDispatcher } from '../intelligence/eventDispatcher.ts';
-import { interpretLifeMoment, generateCompanionReply } from '../intelligence/gemini.ts';
-import { ConnectionDiscoveryEngine } from '../intelligence/connectionDiscovery.ts';
-import { InteractionStateMachine } from '../intelligence/stateMachine.ts';
-import { EventCascadeEngine } from '../intelligence/eventCascade.ts';
-import { NotificationPolicyEngine } from '../intelligence/notificationPolicy.ts';
-import { LifeMoment, ConversationMessage } from '../../types/index.ts';
-
+import { randomUUID, randomBytes } from "node:crypto";
+import { Router, Request, Response } from "express";
+import { db } from "../db.ts";
+import { eventDispatcher } from "../intelligence/eventDispatcher.ts";
+import {
+  aiStatus,
+  interpretLifeMoment,
+  generateCompanionReply,
+  momentKinds,
+  InterpretedMomentResult,
+} from "../intelligence/gemini.ts";
+import { ConnectionDiscoveryEngine } from "../intelligence/connectionDiscovery.ts";
+import { InteractionStateMachine } from "../intelligence/stateMachine.ts";
+import { EventCascadeEngine } from "../intelligence/eventCascade.ts";
+import { NotificationPolicyEngine } from "../intelligence/notificationPolicy.ts";
+import {
+  LifeFlowEngine,
+  ProactiveScheduler,
+} from "../intelligence/lifeFlow.ts";
+import { CityEvent, LifeMoment, UserProfile } from "../../types/index.ts";
 export const apiRouter = Router();
-
-// --- Middleware helper to resolve current user ---
-function getSessionUser(req: Request) {
-  const token = (req.headers['x-session-token'] as string) || (req.query.session as string) || (req.query.userId as string);
-  if (token) {
-    const user = db.getUserBySession(token) || db.getUserById(token);
-    if (user) return user;
-  }
-  // Default to Elena Vance
-  return db.getUsers()[0];
-}
-
-// --- SSE Realtime Stream ---
-apiRouter.get('/events/stream', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const connId = eventDispatcher.addClient(user.id, res);
-
-  req.on('close', () => {
-    eventDispatcher.removeClient(connId);
+const demoEnabled = () =>
+  process.env.ENABLE_DEMO === "true" ||
+  (process.env.NODE_ENV !== "production" &&
+    !process.argv.includes("--production") &&
+    process.env.ENABLE_DEMO !== "false");
+const safeUser = (user: UserProfile) => {
+  const { sessionToken, ...profile } = user;
+  return profile;
+};
+const userOf = (req: Request) =>
+  db.getUserBySession(
+    (req.headers["x-session-token"] as string) || (req.query.session as string),
+  )!;
+const fail = (res: Response, error: unknown) =>
+  res.status(400).json({
+    error:
+      error instanceof Error
+        ? error.message
+        : "Unable to complete the request.",
   });
+const asyncRoute =
+  (handler: (req: Request, res: Response) => Promise<any>) =>
+  (req: Request, res: Response) => {
+    handler(req, res).catch((e) => fail(res, e));
+  };
+const validText = (value: unknown, max = 4000) =>
+  typeof value === "string" && value.trim().length > 0 && value.length <= max;
+apiRouter.get("/bootstrap", (_req, res) =>
+  res.json({
+    ai: aiStatus(),
+    demoEnabled: demoEnabled(),
+    demoUsers: demoEnabled()
+      ? db
+          .getUsers()
+          .filter(
+            (u) =>
+              u.id.startsWith("user_") &&
+              [
+                "user_elena_vance",
+                "user_rashid_alfalasi",
+                "user_tariq_mansoor",
+                "user_sarah_jenkins",
+              ].includes(u.id),
+          )
+          .map((u) => ({
+            id: u.id,
+            name: u.name,
+            professions: u.professions,
+            primaryArea: u.primaryArea,
+          }))
+      : [],
+  }),
+);
+apiRouter.post("/demo/session", (req, res) => {
+  if (!demoEnabled())
+    return res.status(403).json({ error: "Demo mode is disabled." });
+  const user = db.getUserById(req.body.userId);
+  if (
+    !user ||
+    ![
+      "user_elena_vance",
+      "user_rashid_alfalasi",
+      "user_tariq_mansoor",
+      "user_sarah_jenkins",
+    ].includes(user.id)
+  )
+    return res.status(404).json({ error: "Demo participant not found." });
+  res.json({ user: safeUser(user), sessionToken: user.sessionToken });
 });
-
-// --- Session & Users ---
-apiRouter.get('/session', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  res.json({ user, activeConnections: eventDispatcher.getActiveCount() });
-});
-
-apiRouter.get('/users', (req: Request, res: Response) => {
-  res.json({ users: db.getUsers() });
-});
-
-apiRouter.post('/users', (req: Request, res: Response) => {
-  const { name, profession, primaryArea, bio } = req.body;
-  if (!name || !name.trim()) {
-    res.status(400).json({ error: 'Name is required' });
-    return;
-  }
-  const id = `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const newUser = {
+apiRouter.post("/users", (req, res) => {
+  if (!validText(req.body.name, 100))
+    return res.status(400).json({ error: "Enter your name." });
+  const id = randomUUID();
+  const user: UserProfile = {
     id,
-    name: name.trim(),
-    handle: `@${name.toLowerCase().replace(/\s+/g, '_')}`,
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-    bio: bio || 'Resident exploring Dubai living opportunities.',
-    professions: [profession || 'Technologist'],
-    skills: ['Strategy', 'Collaboration'],
-    interests: ['AI', 'Dubai Living', 'Coffee'],
-    primaryArea: primaryArea || 'Dubai Marina',
-    frequentedAreas: [primaryArea || 'Dubai Marina', 'Downtown Dubai'],
+    name: req.body.name.trim(),
+    handle: "",
+    avatar: "",
+    bio: typeof req.body.bio === "string" ? req.body.bio.slice(0, 500) : "",
+    professions: [
+      typeof req.body.profession === "string"
+        ? req.body.profession.slice(0, 100)
+        : "Resident",
+    ],
+    skills: [],
+    interests: [],
+    goals: [],
+    primaryArea:
+      typeof req.body.primaryArea === "string"
+        ? req.body.primaryArea.slice(0, 100)
+        : "Dubai Marina",
+    frequentedAreas: [],
     scheduleRoutine: {
-      workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      workHours: '09:00 - 18:00',
-      quietHoursStart: '22:00',
-      quietHoursEnd: '07:00',
+      workDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      workHours: "09:00 - 18:00",
+      quietHoursStart: "22:00",
+      quietHoursEnd: "07:00",
     },
     consentSettings: {
-      allowProfessionalIntros: true,
-      allowSocialIntros: true,
-      allowTransportInsights: true,
-      allowFoodOffers: true,
+      allowProfessionalIntros: false,
+      allowSocialIntros: false,
+      allowTransportInsights: false,
+      allowFoodOffers: false,
       requireExplicitApprovalBeforeContactShare: true,
-      maxWeeklyIntros: 5,
+      maxWeeklyIntros: 3,
     },
     privacyBoundaries: {
       shareExactLocation: false,
-      shareWorkAffiliation: true,
+      shareWorkAffiliation: false,
       anonymousUntilConsent: true,
     },
-    notificationBudget: {
-      maxPerDay: 6,
-      usedToday: 0,
-      quietHoursActive: false,
-    },
-    sessionToken: `sess_${id}`,
+    notificationBudget: { maxPerDay: 4, usedToday: 0, quietHoursActive: false },
+    allowEventDiscovery: false,
+    sessionToken: randomBytes(32).toString("hex"),
   };
-
-  db.updateUser(newUser);
-
-  db.createThread({
-    id: `thread_${id}_main`,
-    ownerUserId: id,
-    threadType: 'GENERAL_AI',
-    title: `${newUser.name} & LIFEOS Companion`,
-    status: 'ACTIVE',
-    unreadCount: 0,
-    updatedAt: new Date().toISOString(),
+  db.updateUser(user);
+  res.status(201).json({
+    success: true,
+    user: safeUser(user),
+    sessionToken: user.sessionToken,
   });
-
-  res.json({ success: true, user: newUser });
 });
-
-apiRouter.put('/users/profile', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  const updates = req.body;
-  const updatedUser = { ...user, ...updates };
-  db.updateUser(updatedUser);
-  res.json({ success: true, user: updatedUser });
+// All subsequent endpoints are scoped to an unguessable participant credential.
+apiRouter.use((req, res, next) => {
+  if (!userOf(req))
+    return res.status(401).json({
+      error:
+        "Your private session is missing or invalid. Open your saved access link or create a participant.",
+    });
+  next();
 });
-
-// --- Life Moments ---
-apiRouter.get('/moments', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  const scope = req.query.all === 'true' ? undefined : user.id;
-  res.json({ moments: db.getMoments(scope) });
+apiRouter.get("/session", (req, res) =>
+  res.json({ user: safeUser(userOf(req)), ai: aiStatus() }),
+);
+apiRouter.get("/users", (_req, res) => res.json({ users: [] }));
+apiRouter.get("/events/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  const id = eventDispatcher.addClient(userOf(req).id, res);
+  const heartbeat = setInterval(() => res.write(": keepalive\n\n"), 20000);
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    eventDispatcher.removeClient(id);
+  });
 });
-
-apiRouter.post('/moments', async (req: Request, res: Response) => {
-  try {
-    const user = getSessionUser(req);
-    const { description, relatedEventId, manualKind } = req.body;
-
-    if (!description || typeof description !== 'string') {
-      res.status(400).json({ error: 'Description is required' });
-      return;
+apiRouter.put("/users/profile", (req, res) => {
+  const u = userOf(req),
+    b = req.body,
+    updated = structuredClone(u);
+  for (const key of ["name", "bio", "primaryArea"] as const)
+    if (b[key] !== undefined) {
+      if (typeof b[key] !== "string" || b[key].length > 500)
+        return res.status(400).json({ error: "Invalid profile text." });
+      updated[key] = b[key].trim();
     }
-
-    // 1. Interpret moment using Gemini
-    const interpreted = await interpretLifeMoment(description, user);
-
-    const momentId = `mom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const newMoment: LifeMoment = {
-      id: momentId,
-      ownerId: user.id,
-      ownerName: user.name,
-      kind: manualKind || interpreted.kind,
-      description: description.trim(),
-      startTime: interpreted.startTimeStr,
-      endTime: interpreted.endTimeStr,
-      approximateArea: interpreted.approximateArea,
-      goals: interpreted.goals,
-      preferences: interpreted.preferences,
-      protectedConstraints: interpreted.protectedConstraints,
-      sharingPermissions: interpreted.sharingPermissions,
-      status: 'ACTIVE',
-      relatedEventId,
+  for (const key of [
+    "professions",
+    "skills",
+    "interests",
+    "frequentedAreas",
+    "goals",
+    "stoppedTopics",
+  ] as const)
+    if (b[key] !== undefined) {
+      if (
+        !Array.isArray(b[key]) ||
+        b[key].length > 30 ||
+        b[key].some((s: any) => typeof s !== "string" || s.length > 200)
+      )
+        return res.status(400).json({ error: "Invalid profile list." });
+      updated[key] = b[key];
+    }
+  if (b.scheduleRoutine) {
+    const s = { ...u.scheduleRoutine, ...b.scheduleRoutine };
+    if (
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(s.quietHoursStart) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(s.quietHoursEnd) ||
+      !/^([01]\d|2[0-3]):[0-5]\d\s*-\s*([01]\d|2[0-3]):[0-5]\d$/.test(
+        s.workHours,
+      ) ||
+      !Array.isArray(s.workDays) ||
+      s.workDays.some(
+        (d: any) =>
+          ![
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+          ].includes(d),
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: "Use valid times and weekdays for your schedule." });
+    updated.scheduleRoutine = s;
+  }
+  for (const key of [
+    "consentSettings",
+    "privacyBoundaries",
+    "notificationBudget",
+  ] as const)
+    if (b[key]) {
+      const next = { ...u[key] };
+      for (const field of Object.keys(next)) {
+        if (b[key][field] === undefined) continue;
+        const value = b[key][field];
+        if (
+          typeof value !== typeof (next as any)[field] ||
+          (typeof value === "number" &&
+            (!Number.isInteger(value) || value < 0 || value > 20))
+        )
+          return res.status(400).json({ error: "Invalid preference value." });
+        (next as any)[field] = value;
+      }
+      (updated as any)[key] = next;
+    }
+  updated.notificationBudget.usedToday = u.notificationBudget.usedToday;
+  updated.consentSettings.requireExplicitApprovalBeforeContactShare = true;
+  if (typeof b.allowEventDiscovery === "boolean")
+    updated.allowEventDiscovery = b.allowEventDiscovery;
+  db.updateUser(updated);
+  NotificationPolicyEngine.processQueue();
+  res.json({ success: true, user: safeUser(updated) });
+});
+function saveMoment(
+  user: UserProfile,
+  description: string,
+  interpreted: InterpretedMomentResult,
+  id?: string,
+  relatedEventId?: string,
+) {
+  const old = id ? db.getMomentById(id) : undefined;
+  const linkedEvent =
+    interpreted.kind === "ATTENDING_EVENT"
+      ? db
+          .getEvents()
+          .find(
+            (e) =>
+              description.toLowerCase().includes(e.title.toLowerCase()) &&
+              e.area === interpreted.approximateArea,
+          )
+      : undefined;
+  const moment: LifeMoment = {
+    id: id || randomUUID(),
+    ownerId: user.id,
+    kind: interpreted.kind,
+    description,
+    startTime: interpreted.startTimeStr,
+    endTime: interpreted.endTimeStr,
+    approximateArea: interpreted.approximateArea,
+    goals: interpreted.goals,
+    preferences: interpreted.preferences,
+    protectedConstraints: interpreted.protectedConstraints,
+    sharingPermissions: interpreted.sharingPermissions,
+    status: "ACTIVE",
+    relatedEventId: relatedEventId || old?.relatedEventId || linkedEvent?.id,
+    createdAt: old?.createdAt || new Date().toISOString(),
+  };
+  if (old) db.updateMoment(moment);
+  else db.addMoment(moment);
+  eventDispatcher.sendToUser(user.id, {
+    type: old ? "MOMENT_UPDATED" : "MOMENT_CREATED",
+    recipientUserId: user.id,
+    data: {},
+    timestamp: new Date().toISOString(),
+  });
+  ConnectionDiscoveryEngine.evaluateMoment(moment);
+  LifeFlowEngine.review(user.id);
+  if (moment.kind === "FOOD_HUNGER") {
+    const insight = {
+      id: `food_${moment.id}`,
+      recipientUserId: user.id,
+      relatedMomentId: moment.id,
+      insightType: "FOOD_RESCUE" as const,
+      title: "Your food preferences are saved",
+      summary: `Looking in ${moment.approximateArea}. ${moment.preferences.join(". ")}`,
+      evidence:
+        "No verified live provider is connected. You can try the clearly labelled food demo in You.",
+      confidence: 0,
+      nextSuggestedAction:
+        "Review your preferences or try the sample food scenario.",
+      isActionable: false,
+      status: "NEW" as const,
       createdAt: new Date().toISOString(),
     };
-
-    db.addMoment(newMoment);
-
-    // 2. Add confirmation message to user's AI thread
-    const userThreads = db.getThreads(user.id);
-    const mainThread = userThreads[0];
-    if (mainThread) {
-      db.addMessage({
-        id: `msg_mom_ack_${Date.now()}`,
-        threadId: mainThread.id,
-        senderRole: 'LIFEOS_AI',
-        content: `I've registered your moment: "${newMoment.description}". Area: ${newMoment.approximateArea}. Goals: ${newMoment.goals.join(', ')}. I will quietly coordinate opportunities and protect your focus.`,
-        createdAt: new Date().toISOString(),
+    if (db.getInsights(user.id).some((i) => i.id === insight.id))
+      db.updateInsight(insight);
+    else db.addInsight(insight);
+  }
+  return moment;
+}
+apiRouter.get("/moments", (req, res) =>
+  res.json({ moments: db.getMoments(userOf(req).id) }),
+);
+apiRouter.post(
+  "/moments",
+  asyncRoute(async (req, res) => {
+    if (!validText(req.body.description))
+      return res
+        .status(400)
+        .json({ error: "Describe your moment in 1 to 4000 characters." });
+    const u = userOf(req),
+      i = await interpretLifeMoment(req.body.description, u);
+    res.json({
+      success: true,
+      moment: saveMoment(u, req.body.description.trim(), i),
+    });
+  }),
+);
+apiRouter.patch("/moments/:id", (req, res) => {
+  const u = userOf(req),
+    existing = db.getMomentById(req.params.id);
+  if (!existing || existing.ownerId !== u.id)
+    return res.status(404).json({ error: "Moment not found." });
+  const meetingProposal = db
+    .getProposals(u.id)
+    .find((p) => `meeting_${p.id}_${u.id}` === existing.id);
+  if (meetingProposal) {
+    const success =
+      req.body.status === "CANCELLED"
+        ? InteractionStateMachine.declineProposal(meetingProposal.id, u.id)
+        : req.body.status === "FULFILLED"
+          ? InteractionStateMachine.complete(meetingProposal.id, u.id)
+          : false;
+    if (success) return res.json({ success: true });
+    return res
+      .status(409)
+      .json({
+        error:
+          "Use the introduction card to change an agreed meeting. Both participants must approve the change.",
       });
+  }
+  const m = structuredClone(existing);
+  if (req.body.description !== undefined) {
+    if (!validText(req.body.description))
+      return res.status(400).json({ error: "Enter a description." });
+    m.description = req.body.description.trim();
+  }
+  for (const key of ["startTime", "endTime"] as const)
+    if (req.body[key]) {
+      if (!Number.isFinite(Date.parse(req.body[key])))
+        return res.status(400).json({ error: "Choose valid times." });
+      m[key] = req.body[key];
     }
-
-    // 3. Dispatch realtime event
-    eventDispatcher.broadcast({
-      type: 'MOMENT_CREATED',
-      data: { moment: newMoment },
-      timestamp: new Date().toISOString(),
+  if (
+    Number.isFinite(Date.parse(m.startTime)) &&
+    Date.parse(m.endTime) <= Date.parse(m.startTime)
+  )
+    return res
+      .status(400)
+      .json({ error: "End time must be after start time." });
+  if (
+    req.body.status &&
+    !["ACTIVE", "FULFILLED", "CANCELLED"].includes(req.body.status)
+  )
+    return res.status(400).json({ error: "Invalid status." });
+  if (req.body.status) m.status = req.body.status;
+  if (req.body.goals) {
+    if (
+      !Array.isArray(req.body.goals) ||
+      req.body.goals.some((s: any) => typeof s !== "string")
+    )
+      return res.status(400).json({ error: "Invalid goals." });
+    m.goals = req.body.goals;
+  }
+  if (req.body.sharingPermissions) {
+    if (
+      !["PRIVATE", "AGENT_COORDINATED", "COMMUNITY_VISIBLE"].includes(
+        req.body.sharingPermissions,
+      )
+    )
+      return res.status(400).json({ error: "Invalid sharing preference." });
+    m.sharingPermissions = req.body.sharingPermissions;
+  }
+  if (m.kind === "REST_TIME") m.sharingPermissions = "PRIVATE";
+  db.updateMoment(m);
+  if (m.status === "CANCELLED" || m.sharingPermissions === "PRIVATE")
+    for (const p of db
+      .getProposals(u.id)
+      .filter(
+        (p) => p.relatedMomentId === m.id || p.recipientMomentId === m.id,
+      ))
+      InteractionStateMachine.declineProposal(
+        p.id,
+        u.id,
+        "Related plan cancelled or made private.",
+      );
+  if (m.status === "FULFILLED" && existing.status !== "FULFILLED")
+    db.addOutcome({
+      id: randomUUID(),
+      ownerId: u.id,
+      relatedMomentId: m.id,
+      summary: m.description,
+      createdAt: new Date().toISOString(),
     });
-
-    // 4. Run autonomous connection discovery
-    setTimeout(() => {
-      ConnectionDiscoveryEngine.evaluateMoment(newMoment);
-    }, 600);
-
-    res.json({ success: true, moment: newMoment });
-  } catch (err: any) {
-    console.error('Error creating moment:', err);
-    res.status(500).json({ error: err.message || 'Failed to create moment' });
-  }
+  if (m.status === "ACTIVE") ConnectionDiscoveryEngine.evaluateMoment(m);
+  LifeFlowEngine.review(u.id);
+  eventDispatcher.sendToUser(u.id, {
+    type: "MOMENT_UPDATED",
+    recipientUserId: u.id,
+    data: {},
+    timestamp: new Date().toISOString(),
+  });
+  res.json({ success: true, moment: m });
 });
-
-// --- Proposals & State Machine Actions ---
-apiRouter.get('/proposals', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  res.json({ proposals: db.getProposals(user.id) });
-});
-
-apiRouter.post('/proposals/:id/respond', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  const { id } = req.params;
-  const { action, newTime, newPlace, reason } = req.body;
-
-  let success = false;
-  if (action === 'RECIPIENT_INTERESTED') {
-    success = InteractionStateMachine.recipientExpressesInterest(id, user.id);
-  } else if (action === 'INITIATOR_APPROVED') {
-    success = InteractionStateMachine.initiatorApprovesProposal(id, user.id);
-  } else if (action === 'DECLINE') {
-    success = InteractionStateMachine.declineProposal(id, user.id, reason);
-  } else if (action === 'ADJUST') {
-    success = InteractionStateMachine.adjustProposal(id, user.id, newTime, newPlace);
-  }
-
-  const proposal = db.getProposalById(id);
-  res.json({ success, proposal });
-});
-
-// --- Chat & Threads ---
-apiRouter.get('/threads', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  let threads = db.getThreads(user.id);
-  if (threads.length === 0) {
-    const freshThread = db.createThread({
-      id: `thread_${user.id}_default`,
-      ownerUserId: user.id,
-      threadType: 'GENERAL_AI',
-      title: `${user.name} & LIFEOS Coordinator`,
-      status: 'ACTIVE',
-      unreadCount: 0,
-      updatedAt: new Date().toISOString(),
+apiRouter.get("/proposals", (req, res) =>
+  res.json({ proposals: db.getProposals(userOf(req).id) }),
+);
+apiRouter.post("/proposals/:id/respond", (req, res) => {
+  const uid = userOf(req).id,
+    b = req.body,
+    id = req.params.id;
+  const success =
+    b.action === "RECIPIENT_INTERESTED"
+      ? InteractionStateMachine.recipientExpressesInterest(id, uid)
+      : b.action === "INITIATOR_APPROVED"
+        ? InteractionStateMachine.initiatorApprovesProposal(id, uid)
+        : b.action === "DECLINE"
+          ? InteractionStateMachine.declineProposal(id, uid, b.reason)
+          : b.action === "ADJUST"
+            ? InteractionStateMachine.adjustProposal(
+                id,
+                uid,
+                b.newTime,
+                b.newPlace,
+              )
+            : b.action === "COMPLETE"
+              ? InteractionStateMachine.complete(id, uid)
+              : false;
+  if (!success)
+    return res.status(409).json({
+      error:
+        "This action is not available. Refresh the proposal and check its time and approvals.",
     });
-    threads = [freshThread];
-  }
+  res.json({ success: true });
+});
+apiRouter.get("/threads", (req, res) => {
+  const u = userOf(req);
+  let threads = db.getThreads(u.id);
+  if (!threads.length)
+    threads = [
+      db.createThread({
+        id: randomUUID(),
+        ownerUserId: u.id,
+        threadType: "GENERAL_AI",
+        title: "Your conversation",
+        status: "ACTIVE",
+        unreadCount: 0,
+        updatedAt: new Date().toISOString(),
+      }),
+    ];
   res.json({ threads });
 });
-
-apiRouter.get('/threads/:threadId/messages', (req: Request, res: Response) => {
-  const { threadId } = req.params;
-  const messages = db.getMessages(threadId);
-  res.json({ messages });
+apiRouter.post("/threads", (req, res) => {
+  res.json({
+    thread: db.createThread({
+      id: randomUUID(),
+      ownerUserId: userOf(req).id,
+      relatedMomentId: db
+        .getMoments(userOf(req).id)
+        .find((m) => m.id === req.body.momentId)?.id,
+      threadType: req.body.momentId ? "MOMENT_COORDINATION" : "GENERAL_AI",
+      title: req.body.momentId ? "About your moment" : "Your conversation",
+      status: "ACTIVE",
+      unreadCount: 0,
+      updatedAt: new Date().toISOString(),
+    }),
+  });
 });
-
-apiRouter.post('/threads/:threadId/messages', async (req: Request, res: Response) => {
-  try {
-    const user = getSessionUser(req);
-    const { threadId } = req.params;
-    const { content } = req.body;
-
-    if (!content || !content.trim()) {
-      res.status(400).json({ error: 'Message content is required' });
-      return;
-    }
-
-    // 1. Save user message
-    const userMsg: ConversationMessage = {
-      id: `msg_u_${Date.now()}`,
-      threadId,
-      senderRole: 'USER',
-      content: content.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    db.addMessage(userMsg);
-
-    // 2. Fetch history
-    const history = db.getMessages(threadId).map((m) => ({
-      senderRole: m.senderRole,
-      content: m.content,
-    }));
-
-    const activeMoments = db.getMoments(user.id).filter((m) => m.status === 'ACTIVE');
-
-    // 3. Generate response with Gemini
-    const { reply } = await generateCompanionReply(content, user, history, activeMoments[0]);
-
-    const aiMsg: ConversationMessage = {
-      id: `msg_ai_${Date.now()}`,
-      threadId,
-      senderRole: 'LIFEOS_AI',
-      content: reply,
-      createdAt: new Date().toISOString(),
-    };
-    db.addMessage(aiMsg);
-
-    // 4. If user expressed an event intention, auto-create/update LifeMoment
-    const lower = content.toLowerCase();
-    if (
-      lower.includes('attending') ||
-      lower.includes('event') ||
-      lower.includes('founder') ||
-      lower.includes('hungry') ||
-      lower.includes('rest')
-    ) {
-      setTimeout(async () => {
-        const interpreted = await interpretLifeMoment(content, user);
-        const moment: LifeMoment = {
-          id: `mom_${Date.now()}`,
-          ownerId: user.id,
-          ownerName: user.name,
-          kind: interpreted.kind,
-          description: content.trim(),
-          startTime: interpreted.startTimeStr,
-          endTime: interpreted.endTimeStr,
-          approximateArea: interpreted.approximateArea,
-          goals: interpreted.goals,
-          preferences: interpreted.preferences,
-          protectedConstraints: interpreted.protectedConstraints,
-          sharingPermissions: interpreted.sharingPermissions,
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-        };
-        db.addMoment(moment);
-        ConnectionDiscoveryEngine.evaluateMoment(moment);
-      }, 500);
-    }
-
-    eventDispatcher.sendToUser(user.id, {
-      type: 'NEW_MESSAGE',
-      recipientUserId: user.id,
-      data: { message: aiMsg },
-      timestamp: new Date().toISOString(),
-    });
-
-    res.json({ success: true, userMessage: userMsg, aiMessage: aiMsg });
-  } catch (err: any) {
-    console.error('Error handling message:', err);
-    res.status(500).json({ error: err.message || 'Failed to process message' });
-  }
+apiRouter.use("/threads/:threadId/messages", (req, res, next) => {
+  const t = db.getThreadById(req.params.threadId);
+  if (!t || t.ownerUserId !== userOf(req).id)
+    return res.status(404).json({ error: "Conversation not found." });
+  next();
 });
-
-// --- City Events & Cascade ---
-apiRouter.get('/events', (_req: Request, res: Response) => {
-  res.json({ events: db.getEvents() });
+apiRouter.get("/threads/:threadId/messages", (req, res) => {
+  const t = db.getThreadById(req.params.threadId)!;
+  t.unreadCount = 0;
+  db.updateThread(t);
+  res.json({ messages: db.getMessages(t.id) });
 });
-
-apiRouter.post('/events/:id/rsvp', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const user = getSessionUser(req);
-  const { attending } = req.body;
-
-  const event = db.getEventById(id);
-  if (!event) {
-    res.status(404).json({ error: 'Event not found' });
-    return;
-  }
-
-  if (attending) {
-    EventCascadeEngine.incrementAttendance(id, 1);
-
-    // Also auto-create or link user moment
-    const moment: LifeMoment = {
-      id: `mom_rsvp_${Date.now()}_${user.id}`,
-      ownerId: user.id,
-      ownerName: user.name,
-      kind: 'ATTENDING_EVENT',
-      description: `Attending ${event.title} in ${event.area}.`,
-      startTime: `${event.date} ${event.startTime}`,
-      endTime: `${event.date} ${event.endTime}`,
-      approximateArea: event.area,
-      goals: ['Experience event atmosphere', 'Make valuable professional peer connections'],
-      preferences: ['High quality discussions'],
-      protectedConstraints: ['Explicit mutual consent required'],
-      sharingPermissions: 'AGENT_COORDINATED',
-      status: 'ACTIVE',
-      relatedEventId: event.id,
-      createdAt: new Date().toISOString(),
-    };
-    db.addMoment(moment);
-    ConnectionDiscoveryEngine.evaluateMoment(moment);
-  }
-
-  res.json({ success: true, event: db.getEventById(id) });
-});
-
-// --- Insights ---
-apiRouter.get('/insights', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  res.json({ insights: db.getInsights(user.id) });
-});
-
-apiRouter.post('/insights/:id/status', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  const insight = db.getInsights().find((i) => i.id === id);
-  if (insight) {
-    insight.status = status;
-    db.updateInsight(insight);
-  }
-  res.json({ success: true, insight });
-});
-
-// --- Notifications ---
-apiRouter.get('/notifications', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  res.json({ notifications: db.getNotifications(user.id) });
-});
-
-apiRouter.post('/notifications/:id/feedback', (req: Request, res: Response) => {
-  const user = getSessionUser(req);
-  const { id } = req.params;
-  const { action } = req.body;
-  NotificationPolicyEngine.handleUserFeedback(id, user.id, action);
-  res.json({ success: true, notifications: db.getNotifications(user.id) });
-});
-
-// --- 1-Click Interactive Demo Scenarios ---
-apiRouter.post('/demo/run-scenario', async (req: Request, res: Response) => {
-  const { scenario } = req.body;
-
-  if (scenario === 'SCENARIO_A') {
-    // SCENARIO A: Meaningful Introduction (Elena & Rashid)
-    const elena = db.getUserById('user_elena_vance')!;
-    const rashid = db.getUserById('user_rashid_alfalasi')!;
-
-    // 1. Elena creates event moment with networking goal
-    const elenaMoment: LifeMoment = {
-      id: `mom_elena_${Date.now()}`,
-      ownerId: elena.id,
-      ownerName: elena.name,
-      kind: 'ATTENDING_EVENT',
-      description: "I'm attending Dubai Future Evening tomorrow. I want to meet founders building AI businesses.",
-      startTime: 'Tomorrow 19:00',
-      endTime: 'Tomorrow 23:00',
-      approximateArea: 'Dubai Marina',
-      goals: ['Meet AI founders building technology', 'Explore collaborative deep-tech architecture'],
-      preferences: ['Quiet conversation corner', 'Quality over pitch decks'],
-      protectedConstraints: ['Keep direct phone private until mutual agreement'],
-      sharingPermissions: 'AGENT_COORDINATED',
-      status: 'ACTIVE',
-      relatedEventId: 'event_dubai_future_evening',
-      createdAt: new Date().toISOString(),
-    };
-    db.addMoment(elenaMoment);
-
-    // 2. Discover Rashid's compatible moment and trigger Invitation
-    const rashidMoment = db.getMoments(rashid.id)[0];
-    const proposal = InteractionStateMachine.createProposal({
-      initiatingUserId: elena.id,
-      recipientUserId: rashid.id,
-      relatedMomentId: elenaMoment.id,
-      recipientMomentId: rashidMoment?.id,
-      reason: 'Both attending Dubai Future Evening with high synergy in applied AI and tech growth.',
-      matchScore: 0.94,
-      proposedTime: 'Tomorrow 20:15 - 20:45',
-      proposedPlace: 'The Foundry Cafe, Marina Gate Promenade',
-      meetingObjective: 'Relaxed 15-min exchange on AI infrastructure & venture scaling',
-    });
-
-    res.json({
-      success: true,
-      scenario: 'SCENARIO_A',
-      message: 'Scenario A initiated: Elena declared AI founder goal. Private invitation sent to Rashid Al-Falasi.',
-      proposal,
-      elenaMoment,
-    });
-    return;
-  }
-
-  if (scenario === 'SCENARIO_B') {
-    // SCENARIO B: Event Cascading & Transport Pro
-    const event = db.getEventById('event_dubai_future_evening')!;
-    event.confirmedAttendance = 1850;
-    EventCascadeEngine.processEventCascade(event);
-
-    const tariq = db.getUserById('user_tariq_mansoor')!;
-    const insights = db.getInsights(tariq.id);
-
-    res.json({
-      success: true,
-      scenario: 'SCENARIO_B',
-      message: 'Scenario B triggered: Dubai Future Evening confirmed RSVPs updated. Transport demand projected and delivered to Tariq Mansoor for his Marina shift.',
-      event,
-      insights,
-    });
-    return;
-  }
-
-  if (scenario === 'SCENARIO_C') {
-    // SCENARIO C: Everyday Life Moment (Hunger / Local Food Match)
-    const user = getSessionUser(req);
-    const foodMoment: LifeMoment = {
-      id: `mom_food_${Date.now()}`,
-      ownerId: user.id,
-      ownerName: user.name,
-      kind: 'FOOD_HUNGER',
-      description: "I'm hungry in Downtown Dubai, budget 60 AED, looking for healthy wholesome food.",
-      startTime: 'Immediate',
-      endTime: 'Within 45 mins',
-      approximateArea: 'Downtown Dubai',
-      goals: ['Satisfying nutritious meal', 'Zero friction or long wait'],
-      preferences: ['Budget ≤ 60 AED', 'Mediterranean / clean bowls'],
-      protectedConstraints: ['Verified hygiene standards'],
-      sharingPermissions: 'AGENT_COORDINATED',
-      status: 'FULFILLED',
-      createdAt: new Date().toISOString(),
-    };
-    db.addMoment(foodMoment);
-
-    const thread = db.getThreads(user.id)[0];
-    if (thread) {
-      db.addMessage({
-        id: `msg_food_sol_${Date.now()}`,
-        threadId: thread.id,
-        senderRole: 'LIFEOS_AI',
-        content: `🥗 Everyday Life Solution:
-I identified a certified fresh grain & protein bowl from Green Table Downtown (48 AED, 4 mins away on Mohammed Bin Rashid Blvd). Also checked Zaid Artisan Provisions in Alserkal for evening sourdough batches. Table hold placed for 30 minutes. No delivery fees or apps required.`,
+const pendingChats = new Set<string>();
+apiRouter.post(
+  "/threads/:threadId/messages",
+  asyncRoute(async (req, res) => {
+    if (!validText(req.body.content))
+      return res
+        .status(400)
+        .json({ error: "Enter a message in 1 to 4000 characters." });
+    const u = userOf(req),
+      threadId = req.params.threadId;
+    if (pendingChats.has(threadId))
+      return res
+        .status(409)
+        .json({ error: "Please wait for your previous message to finish." });
+    pendingChats.add(threadId);
+    try {
+      const result = await generateCompanionReply(
+        req.body.content,
+        u,
+        db.getMessages(threadId),
+        db.getMoments(u.id).filter((m) => m.status === "ACTIVE"),
+        {
+          events: db.getEvents(),
+          insights: db.getInsights(u.id),
+          proposals: db.getProposals(u.id),
+        },
+      );
+      const userMessage = db.addMessage({
+        id: randomUUID(),
+        threadId,
+        senderRole: "USER",
+        content: req.body.content.trim(),
         createdAt: new Date().toISOString(),
       });
+      let moment;
+      if (result.action !== "NONE" && result.moment)
+        moment = saveMoment(
+          u,
+          result.description || req.body.content.trim(),
+          result.moment,
+          result.action === "UPDATE_MOMENT" ? result.momentId : undefined,
+        );
+      const aiMessage = db.addMessage({
+        id: randomUUID(),
+        threadId,
+        senderRole: "LIFEOS_AI",
+        content: result.reply,
+        createdAt: new Date().toISOString(),
+      });
+      eventDispatcher.sendToUser(u.id, {
+        type: "NEW_MESSAGE",
+        recipientUserId: u.id,
+        data: { threadId },
+        timestamp: new Date().toISOString(),
+      });
+      res.json({ success: true, userMessage, aiMessage, moment });
+    } finally {
+      pendingChats.delete(threadId);
     }
-
-    db.addInsight({
-      id: `ins_food_${Date.now()}`,
-      recipientUserId: user.id,
-      insightType: 'FOOD_RESCUE',
-      title: 'Healthy Lunch Match in Downtown',
-      summary: 'Green Table Downtown Mediterranean bowl (48 AED) ready for walk-in pickup.',
-      evidence: 'Matches budget ≤ 60 AED and clean eating preference. 200m from your current sector.',
-      confidence: 0.95,
-      nextSuggestedAction: 'Pick up at Counter B or request table hold.',
-      isActionable: true,
-      status: 'NEW',
-      createdAt: new Date().toISOString(),
+  }),
+);
+apiRouter.get("/events", (req, res) =>
+  res.json({
+    events: db.getEvents(),
+    attendance: db.getAttendance(userOf(req).id),
+  }),
+);
+apiRouter.post("/events", (req, res) => {
+  const b = req.body,
+    u = userOf(req);
+  if (
+    !validText(b.title, 200) ||
+    !validText(b.area, 100) ||
+    !validText(b.venue, 200) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(b.date) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(b.startTime) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(b.endTime) ||
+    b.endTime <= b.startTime ||
+    Date.parse(`${b.date}T${b.startTime}:00+04:00`) <= Date.now()
+  )
+    return res.status(400).json({
+      error:
+        "Enter an event title, district, venue, and future date with valid start and end times.",
     });
-
+  const event: CityEvent = {
+    id: randomUUID(),
+    title: b.title.trim(),
+    area: b.area,
+    venue: b.venue,
+    date: b.date,
+    startTime: b.startTime,
+    endTime: b.endTime,
+    organizerId: u.id,
+    organizerName: u.name,
+    category:
+      typeof b.category === "string" ? b.category.slice(0, 100) : "Community",
+    description:
+      typeof b.description === "string" ? b.description.slice(0, 2000) : "",
+    estimatedAttendance: Math.max(
+      0,
+      Math.min(100000, Number(b.estimatedAttendance) || 0),
+    ),
+    confirmedAttendance: 0,
+    isDemo: false,
+  };
+  db.addEvent(event);
+  EventCascadeEngine.publish(event);
+  res.status(201).json({ success: true, event });
+});
+apiRouter.post("/events/:id/rsvp", (req, res) => {
+  const u = userOf(req),
+    event = db.getEventById(req.params.id);
+  if (!event) return res.status(404).json({ error: "Event not found." });
+  if (typeof req.body.attending !== "boolean")
+    return res.status(400).json({ error: "Choose attendance." });
+  const attending = req.body.attending,
+    prior = db.getAttendance(u.id).find((a) => a.eventId === event.id);
+  if (prior?.attending === attending) return res.json({ success: true, event });
+  db.setAttendance({ userId: u.id, eventId: event.id, attending, goals: [] });
+  if (attending) {
+    const id = `attendance_${event.id}_${u.id}`,
+      old = db.getMomentById(id);
+    const moment: LifeMoment = {
+      id,
+      ownerId: u.id,
+      kind: "ATTENDING_EVENT",
+      description: `Attending ${event.title}`,
+      startTime: `${event.date}T${event.startTime}:00+04:00`,
+      endTime: `${event.date}T${event.endTime}:00+04:00`,
+      approximateArea: event.area,
+      goals: [],
+      preferences: [],
+      protectedConstraints: ["No introductions without a stated goal"],
+      sharingPermissions: "PRIVATE",
+      status: "ACTIVE",
+      relatedEventId: event.id,
+      createdAt: old?.createdAt || new Date().toISOString(),
+    };
+    if (old) db.updateMoment(moment);
+    else db.addMoment(moment);
+    const thread = db.getThreads(u.id)[0];
+    if (thread)
+      db.addMessage({
+        id: randomUUID(),
+        threadId: thread.id,
+        senderRole: "LIFEOS_AI",
+        content: `${event.isDemo ? "Your sample plan" : "Your plan"} for ${event.title} is saved. What would make it worthwhile: learning, meeting people, or simply enjoying yourself? This records your intention to attend; it is not a ticket or venue booking.`,
+        createdAt: new Date().toISOString(),
+      });
+  } else
+    for (const m of db
+      .getMoments(u.id)
+      .filter((m) => m.relatedEventId === event.id && m.status === "ACTIVE")) {
+      m.status = "CANCELLED";
+      db.updateMoment(m);
+      for (const p of db
+        .getProposals(u.id)
+        .filter(
+          (p) => p.relatedMomentId === m.id || p.recipientMomentId === m.id,
+        ))
+        InteractionStateMachine.declineProposal(
+          p.id,
+          u.id,
+          "Attendance cancelled.",
+        );
+    }
+  EventCascadeEngine.processEventCascade(event);
+  eventDispatcher.sendToUser(u.id, {
+    type: "MOMENT_UPDATED",
+    recipientUserId: u.id,
+    data: {},
+    timestamp: new Date().toISOString(),
+  });
+  res.json({ success: true, event });
+});
+apiRouter.get("/insights", (req, res) =>
+  res.json({ insights: db.getInsights(userOf(req).id) }),
+);
+apiRouter.post("/insights/:id/status", (req, res) => {
+  const insight = db
+    .getInsights(userOf(req).id)
+    .find((i) => i.id === req.params.id);
+  if (!insight) return res.status(404).json({ error: "Insight not found." });
+  if (!["ACCEPTED", "DISMISSED"].includes(req.body.status))
+    return res.status(400).json({ error: "Invalid insight action." });
+  insight.status = req.body.status;
+  db.updateInsight(insight);
+  res.json({ success: true });
+});
+apiRouter.get("/notifications", (req, res) =>
+  res.json({ notifications: db.getNotifications(userOf(req).id) }),
+);
+apiRouter.post("/notifications/:id/feedback", (req, res) => {
+  if (
+    !["DISMISS", "SNOOZE", "NOT_INTERESTED", "STOP_TOPIC"].includes(
+      req.body.action,
+    ) ||
+    !NotificationPolicyEngine.handleUserFeedback(
+      req.params.id,
+      userOf(req).id,
+      req.body.action,
+    )
+  )
+    return res.status(404).json({ error: "Notification or action not found." });
+  res.json({ success: true });
+});
+apiRouter.get("/outcomes", (req, res) =>
+  res.json({ outcomes: db.getOutcomes(userOf(req).id) }),
+);
+apiRouter.post("/outcomes/:id/feedback", (req, res) => {
+  if (
+    typeof req.body.helpful !== "boolean" ||
+    !db.feedbackOutcome(req.params.id, userOf(req).id, req.body.helpful)
+  )
+    return res.status(404).json({ error: "Outcome not found." });
+  res.json({ success: true });
+});
+apiRouter.post("/demo/run-scenario", (req, res) => {
+  if (!demoEnabled())
+    return res.status(403).json({ error: "Demo mode is disabled." });
+  const u = userOf(req),
+    scenario = req.body.scenario;
+  if (scenario === "SCENARIO_A") {
+    const a = db.getUserById("user_elena_vance")!,
+      b = db.getUserById("user_rashid_alfalasi")!,
+      start = new Date(Date.now() + 86400000).toISOString(),
+      end = new Date(Date.now() + 90000000).toISOString();
+    for (const person of [a, b]) {
+      const id = `demo_network_${person.id}`;
+      const m: LifeMoment = {
+        id,
+        ownerId: person.id,
+        kind: "ATTENDING_EVENT",
+        description: "Sample founder gathering in Dubai Marina",
+        startTime: start,
+        endTime: end,
+        approximateArea: "Dubai Marina",
+        goals: ["Meet founders building AI businesses"],
+        preferences: [],
+        protectedConstraints: [],
+        sharingPermissions: "AGENT_COORDINATED",
+        status: "ACTIVE",
+        createdAt: new Date().toISOString(),
+      };
+      if (db.getMomentById(id)) db.updateMoment(m);
+      else db.addMoment(m);
+    }
+    ConnectionDiscoveryEngine.evaluateMoment(
+      db.getMomentById(`demo_network_${a.id}`)!,
+    );
     res.json({
       success: true,
-      scenario: 'SCENARIO_C',
-      message: 'Scenario C executed: Everyday lifestyle moment resolved with zero friction.',
-      foodMoment,
+      message:
+        "Sample plans created. Open Rashid in another browser and accept his private invitation, then return to Elena to agree. No approval is simulated.",
     });
-    return;
+  } else if (scenario === "SCENARIO_B") {
+    const event = db.getEvents()[0];
+    EventCascadeEngine.processEventCascade(event);
+    res.json({
+      success: true,
+      message:
+        "Demand recalculated from independent attendance records. Add attendees through Explore; driver insights appear only when declared shifts overlap and demand is sufficient.",
+    });
+  } else if (scenario === "SCENARIO_C") {
+    db.addInsight({
+      id: `demo_food_${u.id}`,
+      recipientUserId: u.id,
+      insightType: "FOOD_RESCUE",
+      title: "Sample food option",
+      summary:
+        "Demo grain bowl, AED 48, in your declared district. Not a real listing or verified provider.",
+      evidence:
+        "Simulated availability for testing the approval flow. No food exchange or booking takes place.",
+      confidence: 0,
+      nextSuggestedAction: "Accept to save a simulated pickup plan.",
+      isActionable: true,
+      status: "NEW",
+      createdAt: new Date().toISOString(),
+    });
+    res.json({
+      success: true,
+      message:
+        "A clearly simulated food option is ready in Today. Accept it to record a sample pickup plan.",
+    });
+  } else res.status(400).json({ error: "Choose a supported sample scenario." });
+});
+apiRouter.post("/insights/:id/execute", (req, res) => {
+  const u = userOf(req),
+    insight = db.getInsights(u.id).find((i) => i.id === req.params.id);
+  if (
+    !insight ||
+    !insight.id.startsWith("demo_food_") ||
+    insight.status !== "NEW"
+  )
+    return res
+      .status(409)
+      .json({ error: "This sample action is no longer available." });
+  const m = saveMoment(u, "Sample food pickup (no real booking)", {
+    kind: "FOOD_HUNGER",
+    approximateArea: u.primaryArea,
+    goals: ["Try the sample coordination flow"],
+    preferences: ["Demo budget: AED 48"],
+    protectedConstraints: ["Simulation only"],
+    sharingPermissions: "PRIVATE",
+    startTimeStr: new Date().toISOString(),
+    endTimeStr: new Date(Date.now() + 3600000).toISOString(),
+  });
+  insight.status = "ACCEPTED";
+  db.updateInsight(insight);
+  db.addOutcome({
+    id: randomUUID(),
+    ownerId: u.id,
+    relatedMomentId: m.id,
+    summary: "Simulated food pickup accepted. No external booking.",
+    createdAt: new Date().toISOString(),
+  });
+  res.json({ success: true });
+});
+setInterval(() => ProactiveScheduler.tick(), 30000).unref();
+const paperAssets = [
+  { symbol: "EMAAR", name: "Emaar", price: 8.85 },
+  { symbol: "SALIK", name: "Salik", price: 3.42 },
+  { symbol: "DEWA", name: "DEWA", price: 2.58 },
+];
+apiRouter.get("/paper", (req, res) =>
+  res.json({
+    assets: paperAssets,
+    account: db.getPaperAccount(userOf(req).id),
+  }),
+);
+apiRouter.post("/paper/trade", (req, res) => {
+  const { symbol, side, quantity } = req.body,
+    asset = paperAssets.find((a) => a.symbol === symbol);
+  if (
+    !asset ||
+    !["BUY", "SELL"].includes(side) ||
+    !Number.isInteger(quantity) ||
+    quantity < 1 ||
+    quantity > 100000
+  )
+    return res.status(400).json({
+      error: "Choose an asset and a positive whole number of shares.",
+    });
+  try {
+    res.json({
+      account: db.paperTrade(
+        userOf(req).id,
+        symbol,
+        side,
+        quantity,
+        asset.price,
+      ),
+    });
+  } catch (e) {
+    fail(res, e);
   }
-
-  if (scenario === 'RESET') {
-    db.resetDemoData();
-    res.json({ success: true, message: 'Database reset to pristine demo state.' });
-    return;
-  }
-
-  res.status(400).json({ error: 'Unknown scenario' });
 });
