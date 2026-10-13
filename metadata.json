@@ -1,0 +1,8 @@
+{
+  "name": "LIFEOS: Living City Intelligence Engine",
+  "description": "Live your best life in Dubai. Let the city work with you. An autonomous living-city intelligence connecting everyday moments, intentions, and meaningful city connections.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

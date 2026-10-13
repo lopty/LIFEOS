@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-app: #FCFCFF;
+    --surface-soft: #F7F9FD;
+    --surface-cool: #F0F5FF;
+    --primary-blue: #5278F5;
+    --sky-blue: #DDE8FF;
+    --ambient-lavender: #A995F4;
+    --text-primary: #171D2B;
+    --text-secondary: #778296;
+    --border-subtle: #E9EDF4;
+    --card-white: #FFFFFF;
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+}
+
+/* Subtle ambient backdrop mesh */
+.ambient-soft-mesh {
+  background: radial-gradient(circle at 15% 10%, rgba(221, 232, 255, 0.45) 0%, transparent 40%),
+              radial-gradient(circle at 85% 15%, rgba(169, 149, 244, 0.18) 0%, transparent 45%),
+              radial-gradient(circle at 50% 90%, rgba(240, 245, 255, 0.5) 0%, transparent 50%),
+              #FCFCFF;
+}
+
+/* Luminous AI Orb Keyframe Animations */
+@keyframes orb-float {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    filter: drop-shadow(0 8px 24px rgba(82, 120, 245, 0.28));
+  }
+  50% {
+    transform: translateY(-4px) scale(1.02);
+    filter: drop-shadow(0 12px 28px rgba(169, 149, 244, 0.35));
+  }
+}
+
+@keyframes orb-swirl {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-orb-float {
+  animation: orb-float 4.5s ease-in-out infinite;
+}
+
+.animate-orb-swirl {
+  animation: orb-swirl 16s linear infinite;
+}
+
+/* Custom soft scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
+}

@@ -1,0 +1,944 @@
+{
+  "users": [
+    {
+      "id": "user_elena_vance",
+      "name": "Elena Vance",
+      "handle": "@elena_vance",
+      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+      "bio": "Founder at Autonomous Neural Systems. Relocated to Dubai to build edge AI robotics.",
+      "professions": [
+        "AI Founder",
+        "Robotics Systems Architect"
+      ],
+      "skills": [
+        "LLMs",
+        "Embodied AI",
+        "Seed Fundraising",
+        "Product Architecture"
+      ],
+      "interests": [
+        "AI Hardware",
+        "Venture Capital",
+        "Deep Tech",
+        "Specialty Coffee"
+      ],
+      "primaryArea": "Dubai Marina",
+      "frequentedAreas": [
+        "Dubai Marina",
+        "DIFC",
+        "Palm Jumeirah"
+      ],
+      "scheduleRoutine": {
+        "workDays": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "workHours": "09:00 - 19:00",
+        "quietHoursStart": "22:30",
+        "quietHoursEnd": "07:00"
+      },
+      "consentSettings": {
+        "allowProfessionalIntros": true,
+        "allowSocialIntros": true,
+        "allowTransportInsights": false,
+        "allowFoodOffers": true,
+        "requireExplicitApprovalBeforeContactShare": true,
+        "maxWeeklyIntros": 4
+      },
+      "privacyBoundaries": {
+        "shareExactLocation": false,
+        "shareWorkAffiliation": true,
+        "anonymousUntilConsent": true
+      },
+      "notificationBudget": {
+        "maxPerDay": 5,
+        "usedToday": 1,
+        "quietHoursActive": false
+      },
+      "sessionToken": "sess_elena_9238"
+    },
+    {
+      "id": "user_rashid_alfalasi",
+      "name": "Rashid Al-Falasi",
+      "handle": "@rashid_falasi",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "bio": "FinTech Engineering VP & Angel Investor. Looking to support UAE-based applied AI companies.",
+      "professions": [
+        "FinTech VP",
+        "Angel Investor",
+        "Tech Mentor"
+      ],
+      "skills": [
+        "FinTech",
+        "High-Frequency Systems",
+        "Seed Stage Mentorship",
+        "Enterprise Scaling"
+      ],
+      "interests": [
+        "AI Businesses",
+        "Autonomous Tech",
+        "Gulf Tech Ecosystem",
+        "Padel"
+      ],
+      "primaryArea": "Downtown Dubai",
+      "frequentedAreas": [
+        "Downtown Dubai",
+        "Dubai Marina",
+        "DIFC"
+      ],
+      "scheduleRoutine": {
+        "workDays": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "workHours": "08:30 - 18:00",
+        "quietHoursStart": "23:00",
+        "quietHoursEnd": "06:30"
+      },
+      "consentSettings": {
+        "allowProfessionalIntros": true,
+        "allowSocialIntros": false,
+        "allowTransportInsights": false,
+        "allowFoodOffers": false,
+        "requireExplicitApprovalBeforeContactShare": true,
+        "maxWeeklyIntros": 5
+      },
+      "privacyBoundaries": {
+        "shareExactLocation": false,
+        "shareWorkAffiliation": true,
+        "anonymousUntilConsent": true
+      },
+      "notificationBudget": {
+        "maxPerDay": 6,
+        "usedToday": 0,
+        "quietHoursActive": false
+      },
+      "sessionToken": "sess_rashid_4102"
+    },
+    {
+      "id": "user_tariq_mansoor",
+      "name": "Tariq Mansoor",
+      "handle": "@tariq_transport",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "bio": "Professional fleet driver & executive transport specialist operating in Marina, JBR, and Downtown.",
+      "professions": [
+        "Transport Professional",
+        "Executive Chauffeur"
+      ],
+      "skills": [
+        "Dubai Highway Routes",
+        "VIP Chauffeur Services",
+        "Airport Express",
+        "Customer Care"
+      ],
+      "interests": [
+        "Smart City Mobility",
+        "Fleet Logistics",
+        "Cricket"
+      ],
+      "primaryArea": "Dubai Marina",
+      "frequentedAreas": [
+        "Dubai Marina",
+        "JBR",
+        "Downtown Dubai",
+        "DXB Airport"
+      ],
+      "scheduleRoutine": {
+        "workDays": [
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "workHours": "18:00 - 02:00",
+        "quietHoursStart": "03:30",
+        "quietHoursEnd": "12:00"
+      },
+      "consentSettings": {
+        "allowProfessionalIntros": false,
+        "allowSocialIntros": false,
+        "allowTransportInsights": true,
+        "allowFoodOffers": true,
+        "requireExplicitApprovalBeforeContactShare": true,
+        "maxWeeklyIntros": 0
+      },
+      "privacyBoundaries": {
+        "shareExactLocation": true,
+        "shareWorkAffiliation": false,
+        "anonymousUntilConsent": false
+      },
+      "notificationBudget": {
+        "maxPerDay": 8,
+        "usedToday": 1,
+        "quietHoursActive": false
+      },
+      "sessionToken": "sess_tariq_7811"
+    },
+    {
+      "id": "user_sarah_jenkins",
+      "name": "Sarah Jenkins",
+      "handle": "@sarah_events_dxb",
+      "avatar": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
+      "bio": "Head of Programming for Dubai Future Evenings & Innovation Summits.",
+      "professions": [
+        "Event Organiser",
+        "Community Director"
+      ],
+      "skills": [
+        "Major Event Production",
+        "VIP Protocol",
+        "Supplier Coordination",
+        "Audience Logistics"
+      ],
+      "interests": [
+        "Emerging Tech",
+        "Smart Cities",
+        "Hospitality",
+        "Dubai Art"
+      ],
+      "primaryArea": "Dubai Marina",
+      "frequentedAreas": [
+        "Dubai Marina",
+        "DIFC",
+        "World Trade Centre"
+      ],
+      "scheduleRoutine": {
+        "workDays": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday"
+        ],
+        "workHours": "10:00 - 21:00",
+        "quietHoursStart": "23:30",
+        "quietHoursEnd": "07:30"
+      },
+      "consentSettings": {
+        "allowProfessionalIntros": true,
+        "allowSocialIntros": true,
+        "allowTransportInsights": true,
+        "allowFoodOffers": true,
+        "requireExplicitApprovalBeforeContactShare": true,
+        "maxWeeklyIntros": 10
+      },
+      "privacyBoundaries": {
+        "shareExactLocation": false,
+        "shareWorkAffiliation": true,
+        "anonymousUntilConsent": false
+      },
+      "notificationBudget": {
+        "maxPerDay": 12,
+        "usedToday": 2,
+        "quietHoursActive": false
+      },
+      "sessionToken": "sess_sarah_6391"
+    },
+    {
+      "id": "user_layla_noor",
+      "name": "Layla Noor",
+      "handle": "@layla_noor",
+      "avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
+      "bio": "Independent ESG Strategist & parent. Works flexibly between Business Bay and home.",
+      "professions": [
+        "Strategy Consultant",
+        "Parent",
+        "Sustainability Lead"
+      ],
+      "skills": [
+        "ESG Reporting",
+        "Corporate Strategy",
+        "Workshop Facilitation"
+      ],
+      "interests": [
+        "Work-Life Harmony",
+        "Child Enrichment",
+        "Wellness",
+        "Pilates"
+      ],
+      "primaryArea": "Business Bay",
+      "frequentedAreas": [
+        "Business Bay",
+        "Downtown Dubai",
+        "Jumeirah"
+      ],
+      "scheduleRoutine": {
+        "workDays": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday"
+        ],
+        "workHours": "09:00 - 15:30",
+        "quietHoursStart": "21:00",
+        "quietHoursEnd": "06:30"
+      },
+      "consentSettings": {
+        "allowProfessionalIntros": true,
+        "allowSocialIntros": true,
+        "allowTransportInsights": false,
+        "allowFoodOffers": true,
+        "requireExplicitApprovalBeforeContactShare": true,
+        "maxWeeklyIntros": 2
+      },
+      "privacyBoundaries": {
+        "shareExactLocation": false,
+        "shareWorkAffiliation": true,
+        "anonymousUntilConsent": true
+      },
+      "notificationBudget": {
+        "maxPerDay": 4,
+        "usedToday": 0,
+        "quietHoursActive": false
+      },
+      "sessionToken": "sess_layla_3829"
+    },
+    {
+      "id": "user_karim_zaid",
+      "name": "Karim Zaid",
+      "handle": "@karim_culinary",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "bio": "Artisan Sourdough Baker & Founder at Zaid Artisan Provisions. Passionate about zero food waste in Dubai.",
+      "professions": [
+        "Artisan Baker",
+        "Restaurateur"
+      ],
+      "skills": [
+        "Artisan Baking",
+        "Fermentation",
+        "Sustainable Food Ops",
+        "Catering"
+      ],
+      "interests": [
+        "Food Rescue",
+        "Culinary Craft",
+        "Local Farmers",
+        "Community Hubs"
+      ],
+      "primaryArea": "Alserkal Avenue",
+      "frequentedAreas": [
+        "Alserkal Avenue",
+        "Jumeirah",
+        "Dubai Marina"
+      ],
+      "scheduleRoutine": {
+        "workDays": [
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        "workHours": "05:00 - 15:00",
+        "quietHoursStart": "21:00",
+        "quietHoursEnd": "04:30"
+      },
+      "consentSettings": {
+        "allowProfessionalIntros": false,
+        "allowSocialIntros": true,
+        "allowTransportInsights": false,
+        "allowFoodOffers": true,
+        "requireExplicitApprovalBeforeContactShare": false,
+        "maxWeeklyIntros": 3
+      },
+      "privacyBoundaries": {
+        "shareExactLocation": false,
+        "shareWorkAffiliation": true,
+        "anonymousUntilConsent": false
+      },
+      "notificationBudget": {
+        "maxPerDay": 5,
+        "usedToday": 0,
+        "quietHoursActive": false
+      },
+      "sessionToken": "sess_karim_1922"
+    }
+  ],
+  "moments": [
+    {
+      "id": "mom_rsvp_1791879472452_user_elena_vance",
+      "ownerId": "user_elena_vance",
+      "ownerName": "Elena Vance",
+      "kind": "ATTENDING_EVENT",
+      "description": "Attending Dubai Future Evening in Dubai Marina.",
+      "startTime": "Tomorrow 19:00",
+      "endTime": "Tomorrow 23:00",
+      "approximateArea": "Dubai Marina",
+      "goals": [
+        "Experience event atmosphere",
+        "Make valuable professional peer connections"
+      ],
+      "preferences": [
+        "High quality discussions"
+      ],
+      "protectedConstraints": [
+        "Explicit mutual consent required"
+      ],
+      "sharingPermissions": "AGENT_COORDINATED",
+      "status": "ACTIVE",
+      "relatedEventId": "event_dubai_future_evening",
+      "createdAt": "2026-10-13T08:17:52.452Z"
+    },
+    {
+      "id": "mom_1791878150296",
+      "ownerId": "user_elena_vance",
+      "ownerName": "Elena Vance",
+      "kind": "ATTENDING_EVENT",
+      "description": "I'm attending this event tomorrow. Make it fun for me.",
+      "startTime": "Tomorrow morning/afternoon/evening (exact time unspecified) - Tomorrow TBD",
+      "endTime": "Tomorrow 23:00",
+      "approximateArea": "Dubai Marina",
+      "goals": [
+        "Experience an engaging and fun event atmosphere",
+        "Connect socially in an enjoyable setting"
+      ],
+      "preferences": [
+        "Fun dynamic experience",
+        "Curated social matches"
+      ],
+      "protectedConstraints": [
+        "Keep contact info private",
+        "No aggressive sales pitches"
+      ],
+      "sharingPermissions": "AGENT_COORDINATED",
+      "status": "ACTIVE",
+      "createdAt": "2026-10-13T07:55:50.296Z"
+    },
+    {
+      "id": "mom_elena_1791878065754",
+      "ownerId": "user_elena_vance",
+      "ownerName": "Elena Vance",
+      "kind": "ATTENDING_EVENT",
+      "description": "I'm attending Dubai Future Evening tomorrow. I want to meet founders building AI businesses.",
+      "startTime": "Tomorrow 19:00",
+      "endTime": "Tomorrow 23:00",
+      "approximateArea": "Dubai Marina",
+      "goals": [
+        "Meet AI founders building technology",
+        "Explore collaborative deep-tech architecture"
+      ],
+      "preferences": [
+        "Quiet conversation corner",
+        "Quality over pitch decks"
+      ],
+      "protectedConstraints": [
+        "Keep direct phone private until mutual agreement"
+      ],
+      "sharingPermissions": "AGENT_COORDINATED",
+      "status": "ACTIVE",
+      "relatedEventId": "event_dubai_future_evening",
+      "createdAt": "2026-10-13T07:54:25.754Z"
+    },
+    {
+      "id": "mom_1791877685900",
+      "ownerId": "user_elena_vance",
+      "ownerName": "Elena Vance",
+      "kind": "ATTENDING_EVENT",
+      "description": "I'm attending this event tomorrow. Make it fun for me.",
+      "startTime": "Tomorrow morning/afternoon/evening (TBD) requested: Tomorrow",
+      "endTime": "Tomorrow 23:00",
+      "approximateArea": "Dubai Marina",
+      "goals": [
+        "Enjoy an engaging and fun experience at the event",
+        "Connect socially with relevant attendees"
+      ],
+      "preferences": [
+        "Fun and vibrant atmosphere",
+        "Curated high-value social interactions"
+      ],
+      "protectedConstraints": [
+        "No unsolicited sales pitches",
+        "Protect direct contact details"
+      ],
+      "sharingPermissions": "AGENT_COORDINATED",
+      "status": "ACTIVE",
+      "createdAt": "2026-10-13T07:48:05.900Z"
+    },
+    {
+      "id": "mom_rashid_future_evening",
+      "ownerId": "user_rashid_alfalasi",
+      "ownerName": "Rashid Al-Falasi",
+      "kind": "ATTENDING_EVENT",
+      "description": "Attending Dubai Future Evening. Interested in meeting founders building technology and applied AI.",
+      "startTime": "Tomorrow 19:00",
+      "endTime": "Tomorrow 23:00",
+      "approximateArea": "Dubai Marina",
+      "goals": [
+        "Meet AI founders building deep-tech",
+        "Explore early-stage advisory & angel investments"
+      ],
+      "preferences": [
+        "Casual coffee or quiet conversation corner",
+        "Quality discussion over pitch decks"
+      ],
+      "protectedConstraints": [
+        "No unscheduled contact sharing",
+        "Wrap by 21:45"
+      ],
+      "sharingPermissions": "AGENT_COORDINATED",
+      "status": "ACTIVE",
+      "relatedEventId": "event_dubai_future_evening",
+      "createdAt": "2026-10-13T05:45:05.904Z"
+    }
+  ],
+  "proposals": [
+    {
+      "id": "prop_1791878065756_1k3z",
+      "initiatingUserId": "user_elena_vance",
+      "recipientUserId": "user_rashid_alfalasi",
+      "relatedMomentId": "mom_elena_1791878065754",
+      "recipientMomentId": "mom_rashid_future_evening",
+      "reason": "Both attending Dubai Future Evening with high synergy in applied AI and tech growth.",
+      "matchScore": 0.94,
+      "currentState": "INVITATION_PENDING",
+      "approvedDisclosures": {
+        "initiatorSharedInfo": [
+          "Field: Applied AI Robotics Founder",
+          "Attending Dubai Future Evening"
+        ],
+        "recipientSharedInfo": [
+          "Field: FinTech & Angel Technology Lead",
+          "Attending Dubai Future Evening"
+        ]
+      },
+      "proposedTime": "Tomorrow 20:15 - 20:45",
+      "proposedPlace": "The Foundry Cafe, Marina Gate Promenade",
+      "meetingObjective": "Relaxed 15-min exchange on AI infrastructure & venture scaling",
+      "initiatorConsent": "PENDING",
+      "recipientConsent": "PENDING",
+      "stateHistory": [
+        {
+          "state": "DISCOVERED",
+          "timestamp": "2026-10-13T07:54:25.756Z",
+          "note": "Autonomous CityIntentGraph discovered high semantic match (94%) between moments."
+        },
+        {
+          "state": "ELIGIBILITY_CHECKED",
+          "timestamp": "2026-10-13T07:54:25.756Z",
+          "note": "Passed consent rules: quiet hours respected, weekly intro budget valid, attendance verified."
+        },
+        {
+          "state": "INVITATION_PENDING",
+          "timestamp": "2026-10-13T07:54:25.756Z",
+          "note": "Private confidential invitation prepared for Rashid Al-Falasi. No sensitive contact info disclosed."
+        }
+      ],
+      "createdAt": "2026-10-13T07:54:25.756Z",
+      "updatedAt": "2026-10-13T07:54:25.756Z"
+    },
+    {
+      "id": "prop_1791877685901_nkj3",
+      "initiatingUserId": "user_elena_vance",
+      "recipientUserId": "user_rashid_alfalasi",
+      "relatedMomentId": "mom_1791877685900",
+      "recipientMomentId": "mom_rashid_future_evening",
+      "reason": "Both attending Dubai Marina with complementary goals in AI robotics and technology scaling.",
+      "matchScore": 0.85,
+      "currentState": "INVITATION_PENDING",
+      "approvedDisclosures": {
+        "initiatorSharedInfo": [
+          "Field: Applied AI Robotics Founder",
+          "Attending Dubai Future Evening"
+        ],
+        "recipientSharedInfo": [
+          "Field: FinTech & Angel Technology Lead",
+          "Attending Dubai Future Evening"
+        ]
+      },
+      "proposedTime": "Tomorrow 20:15 - 20:45",
+      "proposedPlace": "The Foundry Cafe, Marina Gate Promenade",
+      "meetingObjective": "Exchange insights on applied AI robotics & technology venture ecosystem",
+      "initiatorConsent": "PENDING",
+      "recipientConsent": "PENDING",
+      "stateHistory": [
+        {
+          "state": "DISCOVERED",
+          "timestamp": "2026-10-13T07:48:05.901Z",
+          "note": "Autonomous CityIntentGraph discovered high semantic match (85%) between moments."
+        },
+        {
+          "state": "ELIGIBILITY_CHECKED",
+          "timestamp": "2026-10-13T07:48:05.901Z",
+          "note": "Passed consent rules: quiet hours respected, weekly intro budget valid, attendance verified."
+        },
+        {
+          "state": "INVITATION_PENDING",
+          "timestamp": "2026-10-13T07:48:05.901Z",
+          "note": "Private confidential invitation prepared for Rashid Al-Falasi. No sensitive contact info disclosed."
+        }
+      ],
+      "createdAt": "2026-10-13T07:48:05.901Z",
+      "updatedAt": "2026-10-13T07:48:05.901Z"
+    }
+  ],
+  "threads": [
+    {
+      "id": "thread_elena_main",
+      "ownerUserId": "user_elena_vance",
+      "threadType": "GENERAL_AI",
+      "title": "Elena & LIFEOS Coordinator",
+      "status": "ACTIVE",
+      "unreadCount": 4,
+      "updatedAt": "2026-10-13T08:19:21.188Z"
+    },
+    {
+      "id": "thread_rashid_main",
+      "ownerUserId": "user_rashid_alfalasi",
+      "threadType": "GENERAL_AI",
+      "title": "Rashid & LIFEOS Coordinator",
+      "status": "ACTIVE",
+      "unreadCount": 2,
+      "updatedAt": "2026-10-13T07:54:25.756Z"
+    },
+    {
+      "id": "thread_tariq_main",
+      "ownerUserId": "user_tariq_mansoor",
+      "threadType": "GENERAL_AI",
+      "title": "Tariq & Fleet Companion",
+      "status": "ACTIVE",
+      "unreadCount": 2,
+      "updatedAt": "2026-10-13T08:17:52.450Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_tariq_welcome",
+      "threadId": "thread_tariq_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "Good evening Tariq. Your Marina shift starts at 18:00. I have quiet insights ready on tonight’s demand curves at Marina Gate.",
+      "createdAt": "2026-10-13T06:46:45.904Z"
+    },
+    {
+      "id": "msg_u_1791877666620",
+      "threadId": "thread_elena_main",
+      "senderRole": "USER",
+      "content": "I'm attending this event tomorrow. Make it fun for me.",
+      "createdAt": "2026-10-13T07:47:46.620Z"
+    },
+    {
+      "id": "msg_ai_1791877672548",
+      "threadId": "thread_elena_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "I would love to tailor tomorrow for you, Elena. What would make it a truly great event—meeting people, learning something new, making business connections, or just enjoying yourself? Once I know your vibe, I'll quietly let Dubai align around it.",
+      "createdAt": "2026-10-13T07:47:52.548Z"
+    },
+    {
+      "id": "msg_inv_1791877685902",
+      "threadId": "thread_rashid_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "Someone attending tomorrow's Dubai Future Evening is building in applied AI robotics and hoping to exchange insights with technology leaders. Your profiles match well with zero friction. Would you be open to an introduction?",
+      "createdAt": "2026-10-13T07:48:05.902Z",
+      "proposalData": {
+        "proposalId": "prop_1791877685901_nkj3",
+        "state": "INVITATION_PENDING",
+        "partnerName": "AI Systems Founder",
+        "partnerProfession": "Autonomous Systems & Edge AI",
+        "partnerBio": "Building edge AI robotics; interested in Gulf tech ecosystem & venture collaboration.",
+        "venue": "The Foundry Cafe, Marina Gate Promenade",
+        "time": "Tomorrow 20:15 - 20:45",
+        "objective": "Exchange insights on applied AI robotics & technology venture ecosystem"
+      },
+      "actionOptions": [
+        {
+          "label": "Yes, I am interested",
+          "action": "RECIPIENT_INTERESTED",
+          "payload": {
+            "proposalId": "prop_1791877685901_nkj3"
+          },
+          "variant": "primary"
+        },
+        {
+          "label": "Not this time",
+          "action": "RECIPIENT_DECLINED",
+          "payload": {
+            "proposalId": "prop_1791877685901_nkj3"
+          },
+          "variant": "secondary"
+        }
+      ]
+    },
+    {
+      "id": "msg_inv_1791878065756",
+      "threadId": "thread_rashid_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "Someone attending tomorrow's Dubai Future Evening is building in applied AI robotics and hoping to exchange insights with technology leaders. Your profiles match well with zero friction. Would you be open to an introduction?",
+      "createdAt": "2026-10-13T07:54:25.756Z",
+      "proposalData": {
+        "proposalId": "prop_1791878065756_1k3z",
+        "state": "INVITATION_PENDING",
+        "partnerName": "AI Systems Founder",
+        "partnerProfession": "Autonomous Systems & Edge AI",
+        "partnerBio": "Building edge AI robotics; interested in Gulf tech ecosystem & venture collaboration.",
+        "venue": "The Foundry Cafe, Marina Gate Promenade",
+        "time": "Tomorrow 20:15 - 20:45",
+        "objective": "Relaxed 15-min exchange on AI infrastructure & venture scaling"
+      },
+      "actionOptions": [
+        {
+          "label": "Yes, I am interested",
+          "action": "RECIPIENT_INTERESTED",
+          "payload": {
+            "proposalId": "prop_1791878065756_1k3z"
+          },
+          "variant": "primary"
+        },
+        {
+          "label": "Not this time",
+          "action": "RECIPIENT_DECLINED",
+          "payload": {
+            "proposalId": "prop_1791878065756_1k3z"
+          },
+          "variant": "secondary"
+        }
+      ]
+    },
+    {
+      "id": "msg_u_1791878076651",
+      "threadId": "thread_elena_main",
+      "senderRole": "USER",
+      "content": "I'm attending this event tomorrow. Make it fun for me.",
+      "createdAt": "2026-10-13T07:54:36.651Z"
+    },
+    {
+      "id": "msg_ai_1791878083456",
+      "threadId": "thread_elena_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "I've got you covered for Dubai Future Evening tomorrow, Elena. With your focus on connecting with fellow AI founders, I'm already quietly coordinating compatibility in the background and will propose private introductions once mutual interest is established. All you need to do is show up and enjoy the evening—let the city do the legwork for you.",
+      "createdAt": "2026-10-13T07:54:43.456Z"
+    },
+    {
+      "id": "msg_u_1791879189937",
+      "threadId": "thread_elena_main",
+      "senderRole": "USER",
+      "content": "hi",
+      "createdAt": "2026-10-13T08:13:09.937Z"
+    },
+    {
+      "id": "msg_ai_1791879414605",
+      "threadId": "thread_elena_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "Hello Elena. How is your evening in the Marina shaping up? Everything is quietly aligned for tomorrow, so feel free to unwind—or let me know if there’s anything on your mind tonight.",
+      "createdAt": "2026-10-13T08:16:54.605Z"
+    },
+    {
+      "id": "msg_u_1791879453873",
+      "threadId": "thread_elena_main",
+      "senderRole": "USER",
+      "content": "I am going to the Dubai Future Evening event tomorrow. Help me meet AI founders.",
+      "createdAt": "2026-10-13T08:17:33.873Z"
+    },
+    {
+      "id": "msg_cascade_driver_1791879472450",
+      "threadId": "thread_tariq_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "📍 Transport Demand Insight for Dubai Marina:\nDubai Future Evening is concluding around 23:00. Based on 1,421 confirmed attendees, ~426 passengers will need rides toward Downtown and Palm Jumeirah between 23:30 - 24:00. Staging is open at North Marina Valet Loop.",
+      "createdAt": "2026-10-13T08:17:52.450Z"
+    },
+    {
+      "id": "msg_u_1791879556180",
+      "threadId": "thread_elena_main",
+      "senderRole": "USER",
+      "content": "I am going to the Dubai Future Evening event tomorrow. Help me meet AI founders.",
+      "createdAt": "2026-10-13T08:19:16.180Z"
+    },
+    {
+      "id": "msg_ai_1791879561187",
+      "threadId": "thread_elena_main",
+      "senderRole": "LIFEOS_AI",
+      "content": "Understood. I have recorded your intention to connect with technology founders. I am quietly reviewing attendees who have opted into introductions and will send a discreet proposal once both sides find mutual value.",
+      "createdAt": "2026-10-13T08:19:21.188Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "event_dubai_future_evening",
+      "title": "Dubai Future Evening",
+      "area": "Dubai Marina",
+      "venue": "Marina Gate Promenade & Yacht Terrace",
+      "date": "Tomorrow",
+      "startTime": "19:00",
+      "endTime": "23:00",
+      "organizerId": "user_sarah_jenkins",
+      "organizerName": "Sarah Jenkins",
+      "category": "Technology & Frontier Innovation",
+      "description": "An open gathering of Dubai technologists, deep-tech founders, engineers, and visionaries discussing autonomous systems and sovereign compute.",
+      "estimatedAttendance": 10000,
+      "confirmedAttendance": 1421,
+      "transportDemandEstimate": {
+        "peakOutflowTime": "23:30 - 24:00",
+        "estimatedTaxisNeeded": 426,
+        "corridors": [
+          {
+            "destination": "Downtown / DIFC Corridor (Sheikh Zayed Road)",
+            "sharePercentage": 44
+          },
+          {
+            "destination": "Palm Jumeirah & JBR Local",
+            "sharePercentage": 32
+          },
+          {
+            "destination": "DXB Airport Express",
+            "sharePercentage": 24
+          }
+        ],
+        "notes": "Based on 1,421 confirmed RSVPs (estimate 30% taxi egress). Peak at 23:00. Designated staging at North Marina loop."
+      },
+      "requiredServices": [
+        {
+          "serviceType": "Technical Stage Assistants",
+          "slots": 4,
+          "status": "PARTIAL"
+        },
+        {
+          "serviceType": "Specialty Beverage Artisan",
+          "slots": 2,
+          "status": "FILLED"
+        },
+        {
+          "serviceType": "Transport Staging Marshals",
+          "slots": 6,
+          "status": "OPEN"
+        }
+      ]
+    },
+    {
+      "id": "event_difc_fintech_sunrise",
+      "title": "DIFC FinTech & Web3 Sunrise",
+      "area": "DIFC",
+      "venue": "Gate Village Building 4",
+      "date": "Thursday",
+      "startTime": "08:30",
+      "endTime": "11:00",
+      "organizerId": "org_difc_innovation",
+      "organizerName": "DIFC Innovation Hub",
+      "category": "Financial Infrastructure",
+      "description": "Breakfast dialogue on cross-border settlements and algorithmic liquidity.",
+      "estimatedAttendance": 450,
+      "confirmedAttendance": 310
+    },
+    {
+      "id": "event_alserkal_makers_salon",
+      "title": "Alserkal Sustainable Living & Food Salon",
+      "area": "Alserkal Avenue",
+      "venue": "Warehouse 46",
+      "date": "Friday",
+      "startTime": "17:00",
+      "endTime": "21:30",
+      "organizerId": "user_karim_zaid",
+      "organizerName": "Karim Zaid",
+      "category": "Community & Craft",
+      "description": "Community gathering exploring circular gastronomy, surplus food stewardship, and local production.",
+      "estimatedAttendance": 250,
+      "confirmedAttendance": 180
+    }
+  ],
+  "insights": [
+    {
+      "id": "ins_cascade_event_dubai_future_evening_user_sarah_jenkins",
+      "recipientUserId": "user_sarah_jenkins",
+      "insightType": "TRANSPORT_DEMAND",
+      "title": "Dubai Marina Egress Projection: Dubai Future Evening",
+      "summary": "~426 vehicles anticipated between 23:30 - 24:00. Fits your 10:00 - 21:00 shift.",
+      "evidence": "Derived from 1,421 confirmed event attendees with 30% commercial transit ratio. No street cruising required.",
+      "confidence": 0.91,
+      "nextSuggestedAction": "Stage near North Marina Valet Loop 20 mins prior to close.",
+      "isActionable": true,
+      "status": "NEW",
+      "createdAt": "2026-10-13T08:17:52.451Z"
+    },
+    {
+      "id": "ins_cascade_event_dubai_future_evening_user_tariq_mansoor",
+      "recipientUserId": "user_tariq_mansoor",
+      "insightType": "TRANSPORT_DEMAND",
+      "title": "Dubai Marina Egress Projection: Dubai Future Evening",
+      "summary": "~426 vehicles anticipated between 23:30 - 24:00. Fits your 18:00 - 02:00 shift.",
+      "evidence": "Derived from 1,421 confirmed event attendees with 30% commercial transit ratio. No street cruising required.",
+      "confidence": 0.91,
+      "nextSuggestedAction": "Stage near North Marina Valet Loop 20 mins prior to close.",
+      "isActionable": true,
+      "status": "NEW",
+      "createdAt": "2026-10-13T08:17:52.449Z"
+    },
+    {
+      "id": "ins_tariq_marina_demand",
+      "recipientUserId": "user_tariq_mansoor",
+      "insightType": "TRANSPORT_DEMAND",
+      "title": "Marina Gate Evening Outflow Window",
+      "summary": "Dubai Future Evening ends at 23:00 with ~1,400 confirmed attendees. Peak transport demand is projected between 22:30 and 23:45.",
+      "evidence": "Calculated from actual confirmed RSVPs (1,420) and historical Marina egress flow. Fits your active 18:00 - 02:00 Marina shift.",
+      "confidence": 0.92,
+      "nextSuggestedAction": "Stage near North Marina Valet Loop around 22:20 without queuing on main tram line.",
+      "isActionable": true,
+      "status": "NEW",
+      "createdAt": "2026-10-13T06:45:05.902Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif_trans_1791879472451_user_sarah_jenkins",
+      "recipientUserId": "user_sarah_jenkins",
+      "priority": "GENTLE",
+      "title": "Transport Demand: Dubai Marina",
+      "message": "Projected outflow of ~426 rides around 23:30 - 24:00 for your shift.",
+      "deliveryStatus": "DELIVERED",
+      "scheduledAt": "2026-10-13T08:17:52.451Z",
+      "deduplicationKey": "cascade_notif_event_dubai_future_evening_user_sarah_jenkins",
+      "category": "CITY_PULSE"
+    },
+    {
+      "id": "notif_trans_1791879472450_user_tariq_mansoor",
+      "recipientUserId": "user_tariq_mansoor",
+      "priority": "GENTLE",
+      "title": "Transport Demand: Dubai Marina",
+      "message": "Projected outflow of ~426 rides around 23:30 - 24:00 for your shift.",
+      "deliveryStatus": "DELIVERED",
+      "scheduledAt": "2026-10-13T08:17:52.450Z",
+      "deduplicationKey": "cascade_notif_event_dubai_future_evening_user_tariq_mansoor",
+      "category": "CITY_PULSE"
+    },
+    {
+      "id": "notif_1791878065757",
+      "recipientUserId": "user_rashid_alfalasi",
+      "priority": "GENTLE",
+      "title": "Potential Event Connection",
+      "message": "A compatible technology founder is attending tomorrow’s gathering. View private invitation?",
+      "deliveryStatus": "DELIVERED",
+      "scheduledAt": "2026-10-13T07:54:25.757Z",
+      "deduplicationKey": "inv_prop_1791878065756_1k3z",
+      "category": "INTRODUCTION"
+    },
+    {
+      "id": "notif_1791877685902",
+      "recipientUserId": "user_rashid_alfalasi",
+      "priority": "GENTLE",
+      "title": "Potential Event Connection",
+      "message": "A compatible technology founder is attending tomorrow’s gathering. View private invitation?",
+      "deliveryStatus": "DELIVERED",
+      "scheduledAt": "2026-10-13T07:48:05.902Z",
+      "deduplicationKey": "inv_prop_1791877685901_nkj3",
+      "category": "INTRODUCTION"
+    },
+    {
+      "id": "notif_tariq_init",
+      "recipientUserId": "user_tariq_mansoor",
+      "priority": "GENTLE",
+      "title": "Transport Demand Insight",
+      "message": "Dubai Marina evening outflow projection ready for your shift.",
+      "deliveryStatus": "DELIVERED",
+      "scheduledAt": "2026-10-13T06:45:05.904Z",
+      "deliveredAt": "2026-10-13T06:45:05.904Z",
+      "deduplicationKey": "tariq_marina_demand_notif",
+      "category": "CITY_PULSE"
+    }
+  ]
+}
